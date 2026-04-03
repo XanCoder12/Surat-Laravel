@@ -84,6 +84,8 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    'admin_secret_code' => env('ADMIN_SECRET_CODE', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key
@@ -98,7 +100,6 @@ return [
     'cipher' => 'AES-256-CBC',
 
     'key' => env('APP_KEY'),
-
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))
@@ -117,7 +118,7 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
-
+    
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
