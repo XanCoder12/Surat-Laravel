@@ -91,7 +91,9 @@ class SuratController extends Controller
         // Pastikan hanya pemilik yang bisa lihat
         abort_if($surat->user_id !== Auth::id(), 403);
 
-        $surat->load(['tahapans.diprosesByUser']);
+        $surat->load(['tahapans' => function($query) {
+            $query->orderBy('tahap')->with('diprosesByUser');
+        }]);
 
         return view('user.surat.show', compact('surat'));
     }

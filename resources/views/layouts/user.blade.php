@@ -324,7 +324,8 @@
 
         {{-- Notifikasi --}}
         <div class="dropdown">
-            <button class="notif-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+            <button type="button" class="notif-btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                    data-bs-placement="bottom-end"
                     aria-expanded="false" id="notif-toggle">
                 <i class="bi bi-bell"></i>
                 @php $unreadNotif = auth()->user()->unreadNotifications->count(); @endphp
@@ -332,7 +333,7 @@
                     <span class="notif-badge">{{ $unreadNotif > 9 ? '9+' : $unreadNotif }}</span>
                 @endif
             </button>
-            <div class="dropdown-menu notif-dropdown" aria-labelledby="notif-toggle">
+            <div class="dropdown-menu notif-dropdown dropdown-menu-end" aria-labelledby="notif-toggle">
                 <div class="notif-header">
                     <span><i class="bi bi-bell me-1"></i> Notifikasi</span>
                     @if($unreadNotif > 0)

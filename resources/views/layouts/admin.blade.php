@@ -12,8 +12,10 @@
 
         /* SIDEBAR */
         #sidebar {
-            width: 240px; min-height: 100vh; background: #1e3a5f;
+            width: 240px; height: 100vh; background: #1e3a5f;
             display: flex; flex-direction: column; flex-shrink: 0;
+            position: sticky; top: 0;
+            overflow-y: auto;
             transition: width 0.2s;
         }
         .sidebar-logo {
@@ -228,6 +230,11 @@
         <a href="{{ route('admin.users.index') }}"
            class="menu-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
             <span class="menu-icon">👥</span> Data Pegawai
+        </a>
+        <div class="menu-label">Chart</div>
+        <a href="{{ route('admin.chart.index') }}"
+           class="menu-item {{ request()->routeIs('admin.chart.*') ? 'active' : '' }}">
+           <span class="menu-icon">📊</span> Statistik & Grafik
         </a>
     </nav>
 

@@ -45,9 +45,14 @@ Route::prefix('Admin')->middleware(['auth', 'verified', 'admin'])->name('admin.'
     Route::get('/Laporan', [LaporanController::class, 'index'])->name('laporan.index');
     Route::get('/Laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
 
+    Route::get('/Chart', [\App\Http\Controllers\Admin\ChartController::class, 'index'])->name('chart.index');
+    Route::get('/Chart/data', [\App\Http\Controllers\Admin\ChartController::class, 'data'])->name('chart.data');
+
     Route::get('/Template', [TemplateSuratController::class, 'index'])->name('template.index');
     Route::post('/Template', [TemplateSuratController::class, 'store'])->name('template.store');
     Route::delete('/Template', [TemplateSuratController::class, 'destroy'])->name('template.destroy');
+
+    
 
     // Users (placeholder dulu, nanti diisi)
     Route::redirect('/Users', '/Admin/Dashboard')->name('users.index');
