@@ -55,8 +55,14 @@
             background: #fff; border-bottom: 1px solid #e5e7eb;
             padding: 0 24px; height: 56px;
             display: flex; align-items: center; justify-content: space-between;
+            gap: 12px;
             position: sticky; top: 0; z-index: 10;
         }
+        
+        .sidebar-toggle {
+            display: none;
+        }
+        
         .topbar-title { font-size: 15px; font-weight: 600; color: #111827; }
         .topbar-right { display: flex; align-items: center; gap: 12px; }
         .topbar-badge {
@@ -182,14 +188,151 @@
             .dashboard-grid { grid-template-columns: 1fr; }
         }
 
-        /* Responsive */
+        /* ===== MOBILE RESPONSIVE ===== */
         @media (max-width: 768px) {
-            #sidebar { width: 0; overflow: hidden; position: fixed; z-index: 50; }
-            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+            body { flex-direction: column; }
+            
+            /* Show sidebar toggle */
+            .sidebar-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                background: none;
+                border: none;
+                color: #6b7280;
+                cursor: pointer;
+                font-size: 20px;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .sidebar-toggle:active { color: #1e3a5f; }
+            
+            /* Hide sidebar on mobile, show toggle button */
+            #sidebar { 
+                width: 260px; 
+                height: auto;
+                position: fixed; 
+                left: 0; 
+                top: 56px;
+                bottom: 0;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 40;
+                border-right: 1px solid rgba(255,255,255,0.1);
+                overflow-y: auto;
+            }
+            
+            #sidebar.is-open { transform: translateX(0); }
+            
+            /* Sidebar backdrop */
+            #sidebar-backdrop {
+                display: none;
+                position: fixed;
+                top: 56px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 35;
+            }
+            
+            #sidebar.is-open ~ #sidebar-backdrop { display: block; }
+            
+            #main { width: 100%; }
+            
+            #topbar { 
+                padding: 0 12px;
+                height: 56px;
+            }
+            
+            .topbar-title { 
+                font-size: 14px;
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            
+            .topbar-right { gap: 8px; }
+            
+            #content { 
+                padding: 12px;
+                overflow-x: hidden;
+            }
+            
+            .card { 
+                padding: 14px;
+                border-radius: 8px;
+            }
+            
+            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 12px 14px; }
+            .stat-label { font-size: 11px; }
+            .stat-value { font-size: 20px; }
+            
+            .dashboard-grid { grid-template-columns: 1fr; }
+            
+            table { font-size: 12px; }
+            thead th { padding: 8px 10px; font-size: 10px; }
+            tbody td { padding: 8px 10px; }
+            
+            .btn { 
+                padding: 6px 10px; 
+                font-size: 11px;
+            }
+            
+            .btn-sm { 
+                padding: 4px 8px; 
+                font-size: 10px;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .section-header h2 { font-size: 14px; }
+            .section-header small { font-size: 11px; }
+            
+            .badge { 
+                font-size: 9px;
+                padding: 2px 6px;
+            }
         }
+        
+        @media (max-width: 480px) {
+            #topbar { 
+                padding: 0 8px;
+                height: 52px;
+            }
+            
+            .sidebar-toggle {
+                width: 36px;
+                height: 36px;
+            }
+            
+            .topbar-title { font-size: 12px; }
+            
+            #content { padding: 8px; }
+            
+            .stat-grid { grid-template-columns: 1fr; gap: 8px; }
+            
+            .card { padding: 10px; }
+            
+            table { font-size: 11px; }
+            
+            thead th { padding: 6px 8px; }
+            tbody td { padding: 6px 8px; }
+            
+            .btn { padding: 5px 8px; font-size: 10px; }
+        }
+        
         .notif-dot {
             color: rgb(0, 0, 0);
-            
         }
     </style>
 </head>
@@ -249,9 +392,12 @@
 
     {{-- TOPBAR --}}
     <header id="topbar">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+            ☰
+        </button>
         <div class="topbar-title">{{ $title ?? 'Dashboard' }}</div>
         <div class="topbar-right">
-            <span class="topbar-badge">
+            <span class="topbar-badge" data-unread-count style="display: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
                 <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
             </svg> <span class="notif-dot"></span>
@@ -300,7 +446,47 @@
     @csrf
 </form>
 
+<div id="sidebar-backdrop"></div>
+
 <script>
+// Mobile menu toggle
+(function () {
+    const sidebar = document.getElementById('sidebar');
+    const toggle = document.getElementById('sidebar-toggle');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    
+    if (!toggle || !sidebar) return;
+    
+    function closeSidebar() {
+        sidebar.classList.remove('is-open');
+    }
+    
+    // Toggle button
+    toggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        sidebar.classList.toggle('is-open');
+    });
+    
+    // Close on backdrop click
+    if (backdrop) {
+        backdrop.addEventListener('click', closeSidebar);
+    }
+    
+    // Close on menu item click
+    const menuItems = sidebar.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+        item.addEventListener('click', closeSidebar);
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && sidebar.classList.contains('is-open')) {
+            closeSidebar();
+        }
+    });
+})();
+
+// User menu dropdown
 (function () {
     var root = document.getElementById('user-menu-dropdown');
     var btn = document.getElementById('user-menu-btn');
