@@ -79,18 +79,47 @@
 
             {{-- FILE --}}
             <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f3f4f6;">
-                <div style="font-size:12px; color:#6b7280; margin-bottom:8px; font-weight:600;">LAMPIRAN</div>
+                <div style="font-size:12px; color:#6b7280; margin-bottom:10px; font-weight:600; letter-spacing:.5px;">LAMPIRAN</div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <a href="{{ Storage::url($surat->file_word) }}" target="_blank"
-                       class="btn btn-sm">
-                        📄 Unduh File Surat (.docx)
-                    </a>
-                    @if($surat->file_lampiran)
-                        <a href="{{ Storage::url($surat->file_lampiran) }}" target="_blank"
-                           class="btn btn-sm">
-                            📎 Unduh Lampiran
-                        </a>
+
+                    {{-- File Word --}}
+                    @if($surat->file_word)
+                        <div style="display:flex; gap:6px;">
+                            <button type="button"
+                                    onclick="openPreview('word', '{{ route('admin.surat.preview', [$surat, 'word']) }}', '{{ $surat->judul }}', 'word')"
+                                    class="btn btn-sm btn-primary"
+                                    style="display:inline-flex; align-items:center; gap:5px;">
+                                👁 Preview .docx
+                            </button>
+                            <a href="{{ route('admin.surat.download', [$surat, 'word']) }}"
+                               class="btn btn-sm"
+                               style="display:inline-flex; align-items:center; gap:5px;">
+                                ⬇ Download .docx
+                            </a>
+                        </div>
                     @endif
+
+                    {{-- File Lampiran --}}
+                    @if($surat->file_lampiran)
+                        @php
+                            $lampiranExt = strtolower(pathinfo($surat->file_lampiran, PATHINFO_EXTENSION));
+                            $isPdf = $lampiranExt === 'pdf';
+                        @endphp
+                        <div style="display:flex; gap:6px;">
+                            <button type="button"
+                                    onclick="openPreview('lampiran', '{{ route('admin.surat.preview', [$surat, 'lampiran']) }}', '{{ $surat->judul }} – Lampiran', '{{ $lampiranExt }}')"
+                                    class="btn btn-sm btn-primary"
+                                    style="display:inline-flex; align-items:center; gap:5px;">
+                                👁 Preview Lampiran
+                            </button>
+                            <a href="{{ route('admin.surat.download', [$surat, 'lampiran']) }}"
+                               class="btn btn-sm"
+                               style="display:inline-flex; align-items:center; gap:5px;">
+                                ⬇ Download Lampiran
+                            </a>
+                        </div>
+                    @endif
+
                 </div>
             </div>
         </div>
@@ -280,5 +309,192 @@
 
     </div>
 </div>
+
+{{-- ========== MODAL PREVIEW FILE ========== --}}
+<div id="previewModal"
+     style="display:none; position:fixed; inset:0; z-index:9999;
+            background:rgba(10,15,30,.75); backdrop-filter:blur(6px);
+            animation:fadeIn .2s ease;"
+     onclick="handleOverlayClick(event)">
+
+    <div id="previewModalBox"
+         style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                width:92vw; max-width:1100px; height:90vh;
+                background:#fff; border-radius:16px; overflow:hidden;
+                display:flex; flex-direction:column;
+                box-shadow:0 32px 80px rgba(0,0,0,.45);">
+
+        {{-- Header --}}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:14px 20px; background:#1e3a5f; color:#fff; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:20px;">📄</span>
+                <div>
+                    <div id="previewTitle" style="font-size:14px; font-weight:600;">Preview Dokumen</div>
+                    <div id="previewSubtitle" style="font-size:11px; color:#93c5fd; margin-top:1px;"></div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <a id="previewDownloadBtn"
+                   href="#"
+                   style="padding:7px 16px; background:rgba(255,255,255,.15);
+                          border:1px solid rgba(255,255,255,.3); border-radius:8px;
+                          color:#fff; font-size:12px; font-weight:500; text-decoration:none;
+                          transition:background .2s;"
+                   onmouseover="this.style.background='rgba(255,255,255,.25)'"
+                   onmouseout="this.style.background='rgba(255,255,255,.15)'">
+                    ⬇ Download
+                </a>
+                <button onclick="closePreview()"
+                        style="background:rgba(255,255,255,.15); border:1px solid rgba(255,255,255,.3);
+                               border-radius:8px; color:#fff; padding:7px 12px; cursor:pointer;
+                               font-size:14px; font-weight:600; transition:background .2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,.25)'"
+                        onmouseout="this.style.background='rgba(255,255,255,.15)'">✕</button>
+            </div>
+        </div>
+
+        {{-- Body --}}
+        <div id="previewBody" style="flex:1; overflow:hidden; position:relative; background:#f1f5f9;">
+
+            {{-- Loading indicator --}}
+            <div id="previewLoader"
+                 style="position:absolute; inset:0; display:flex; flex-direction:column;
+                        align-items:center; justify-content:center; gap:16px; z-index:2;">
+                <div style="width:48px; height:48px; border:4px solid #e2e8f0;
+                            border-top-color:#1e3a5f; border-radius:50%;
+                            animation:spin .8s linear infinite;"></div>
+                <div style="font-size:13px; color:#64748b;">Memuat dokumen…</div>
+            </div>
+
+            {{-- Iframe untuk PDF --}}
+            <iframe id="previewPdfFrame"
+                    src="about:blank"
+                    style="display:none; width:100%; height:100%; border:none;"
+                    onload="onFrameLoad()"></iframe>
+
+            {{-- Iframe Google Docs untuk Word/Office --}}
+            <iframe id="previewWordFrame"
+                    src="about:blank"
+                    style="display:none; width:100%; height:100%; border:none;"
+                    onload="onFrameLoad()"></iframe>
+
+            {{-- Pesan tidak bisa preview --}}
+            <div id="previewNoSupport"
+                 style="display:none; position:absolute; inset:0; align-items:center;
+                        justify-content:center; flex-direction:column; gap:16px; font-size:14px; color:#64748b;">
+                <div style="font-size:48px;">📁</div>
+                <div>Format file tidak dapat di-preview langsung.</div>
+                <a id="previewFallbackDownload" href="#"
+                   class="btn btn-primary">⬇ Download File</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+</style>
+
+<script>
+const PREVIEW_SUPPORTED_PDF  = ['pdf'];
+const PREVIEW_SUPPORTED_WORD = ['doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp'];
+
+let currentDownloadUrl = '';
+
+function openPreview(tipe, previewUrl, title, ext) {
+    const modal   = document.getElementById('previewModal');
+    const loader  = document.getElementById('previewLoader');
+    const pdfFr   = document.getElementById('previewPdfFrame');
+    const wordFr  = document.getElementById('previewWordFrame');
+    const noSupp  = document.getElementById('previewNoSupport');
+    const dlBtn   = document.getElementById('previewDownloadBtn');
+    const fallDl  = document.getElementById('previewFallbackDownload');
+    const ttl     = document.getElementById('previewTitle');
+    const sub     = document.getElementById('previewSubtitle');
+
+    // Reset
+    pdfFr.style.display  = 'none';
+    pdfFr.src            = 'about:blank';
+    wordFr.style.display = 'none';
+    wordFr.src           = 'about:blank';
+    noSupp.style.display = 'none';
+    loader.style.display = 'flex';
+
+    // Download URL
+    const downloadUrl = previewUrl.replace('/preview/', '/download/');
+    currentDownloadUrl = downloadUrl;
+    dlBtn.href  = downloadUrl;
+    fallDl.href = downloadUrl;
+
+    // Title
+    ttl.textContent = title;
+    sub.textContent = '.' + ext.toUpperCase() + ' — klik ✕ untuk tutup';
+
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+
+    const extLower = ext.toLowerCase();
+
+    if (PREVIEW_SUPPORTED_PDF.includes(extLower)) {
+        // Native PDF viewer
+        pdfFr.style.display = 'block';
+        pdfFr.src = previewUrl;
+    } else if (PREVIEW_SUPPORTED_WORD.includes(extLower)) {
+        // Google Docs Viewer — perlu URL publik yang bisa diakses Google
+        // Coba gunakan URL storage langsung (jika server publik)
+        // atau route preview untuk Word
+        const encodedUrl = encodeURIComponent(previewUrl);
+        const gdocsUrl   = 'https://docs.google.com/gview?url=' + encodedUrl + '&embedded=true';
+        wordFr.style.display = 'block';
+        wordFr.src = gdocsUrl;
+
+        // Fallback: jika Google Docs tidak berhasil memuat dalam 15 detik, tampilkan pesan
+        window._previewTimeout = setTimeout(function() {
+            if (loader.style.display !== 'none') {
+                showNoSupport();
+            }
+        }, 15000);
+    } else {
+        showNoSupport();
+    }
+}
+
+function onFrameLoad() {
+    clearTimeout(window._previewTimeout);
+    document.getElementById('previewLoader').style.display = 'none';
+}
+
+function showNoSupport() {
+    document.getElementById('previewLoader').style.display    = 'none';
+    document.getElementById('previewPdfFrame').style.display  = 'none';
+    document.getElementById('previewWordFrame').style.display = 'none';
+    const ns = document.getElementById('previewNoSupport');
+    ns.style.display = 'flex';
+}
+
+function closePreview() {
+    clearTimeout(window._previewTimeout);
+    const modal  = document.getElementById('previewModal');
+    const pdfFr  = document.getElementById('previewPdfFrame');
+    const wordFr = document.getElementById('previewWordFrame');
+    modal.style.display  = 'none';
+    pdfFr.src            = 'about:blank';
+    wordFr.src           = 'about:blank';
+    document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+    if (e.target === document.getElementById('previewModal')) {
+        closePreview();
+    }
+}
+
+// Tutup dengan Esc
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePreview();
+});
+</script>
 
 @endsection
