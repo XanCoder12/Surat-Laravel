@@ -657,7 +657,7 @@
                             class="field-input"
                             id="email" type="email" name="email"
                             value="{{ old('email') }}"
-                            placeholder="nama@instansi.go.id"
+                            placeholder="contoh@gmail.com"
                             required autofocus autocomplete="username">
                         <i class="bi bi-envelope input-icon"></i>
                     </div>
