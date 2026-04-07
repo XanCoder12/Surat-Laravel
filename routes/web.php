@@ -39,6 +39,8 @@ Route::prefix('Admin')->middleware(['auth', 'verified', 'admin'])->name('admin.'
 
     Route::get('/Surat', [SuratController::class, 'index'])->name('surat.index');
     Route::get('/Surat/{surat}', [SuratController::class, 'show'])->name('surat.show');
+    Route::get('/Surat/{surat}/preview/{tipe}', [SuratController::class, 'preview'])->name('surat.preview');
+    Route::get('/Surat/{surat}/download/{tipe}', [SuratController::class, 'download'])->name('surat.download');
     Route::post('/Surat/{surat}/setujui', [SuratController::class, 'setujui'])->name('surat.setujui');
     Route::post('/Surat/{surat}/tolak', [SuratController::class, 'tolak'])->name('surat.tolak');
 
