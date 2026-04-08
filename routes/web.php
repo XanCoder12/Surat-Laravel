@@ -23,6 +23,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/notifikasi/{id}/baca', [NotifikasiController::class, 'read'])->name('user.notif.read');
     Route::post('/notifikasi/baca-semua', [NotifikasiController::class, 'readAll'])->name('user.notif.readAll');
     Route::get('/template', [UserTemplateController::class, 'index'])->name('user.template.index');
+    Route::get('/about', function () {
+        return view('user.about.index', ['title' => 'Tentang Aplikasi']);
+    })->name('user.about.index');
 });
 
 Route::prefix('surat')->name('user.surat.')->group(function () {
