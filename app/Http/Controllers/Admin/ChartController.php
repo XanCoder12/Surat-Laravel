@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Surat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ChartController extends Controller
 {
@@ -16,33 +16,40 @@ class ChartController extends Controller
         ]);
     }
 
-    // ── API endpoint: semua data chart sekaligus ──────────────────────────────
     public function data(Request $request)
     {
         $tahun = (int) $request->get('tahun', now()->year);
 
-        return response()->json([
-            'suratPerBulan'  => $this->suratPerBulan($tahun),
-            'suratPerJenis'  => $this->suratPerJenis($tahun),
-            'suratPerStatus' => $this->suratPerStatus($tahun),
-            'slaChart'       => $this->slaChart($tahun),
-            'suratPerTahap'  => $this->suratPerTahap(),
-            'trendHarian'    => $this->trendHarian(),
-            'topPengusul'    => $this->topPengusul($tahun),
-        ]);
+        if ($tahun < 2000 || $tahun > 2099) {
+            return response()->json(['error' => 'Tahun tidak valid.'], 422);
+        }
+
+        $data = Cache::remember("chart_data_{$tahun}", now()->addMinutes(5), function () use ($tahun) {
+            return [
+                'suratPerBulan'  => $this->suratPerBulan($tahun),
+                'suratPerJenis'  => $this->suratPerJenis($tahun),
+                'suratPerStatus' => $this->suratPerStatus(),
+                'slaChart'       => $this->slaChart($tahun),
+                'suratPerTahap'  => $this->suratPerTahap(),
+                'trendHarian'    => $this->trendHarian(),
+                'topPengusul'    => $this->topPengusul($tahun),
+            ];
+        });
+
+        return response()->json($data);
     }
 
-    // ── Surat per bulan (line / bar) ──────────────────────────────────────────
+    // ── Surat per bulan ───────────────────────────────────────────────────────
     private function suratPerBulan(int $tahun): array
     {
-        $data = DB::table('surats')
+        $rows = DB::table('surats')
             ->whereYear('created_at', $tahun)
             ->selectRaw('
                 MONTH(created_at) as bulan,
                 COUNT(*) as total,
-                SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as selesai,
-                SUM(CASE WHEN status = "proses"  THEN 1 ELSE 0 END) as proses,
-                SUM(CASE WHEN status = "ditolak" THEN 1 ELSE 0 END) as ditolak
+                SUM(status = "selesai") as selesai,
+                SUM(status = "proses")  as proses,
+                SUM(status = "ditolak") as ditolak
             ')
             ->groupBy('bulan')
             ->orderBy('bulan')
@@ -50,33 +57,29 @@ class ChartController extends Controller
             ->keyBy('bulan');
 
         $labels  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-        $total   = [];
-        $selesai = [];
-        $proses  = [];
-        $ditolak = [];
+        $total = $selesai = $proses = $ditolak = [];
 
         for ($m = 1; $m <= 12; $m++) {
-            $row      = $data->get($m);
-            $total[]  = (int) ($row?->total   ?? 0);
-            $selesai[]= (int) ($row?->selesai ?? 0);
-            $proses[] = (int) ($row?->proses  ?? 0);
-            $ditolak[]= (int) ($row?->ditolak ?? 0);
+            $row       = $rows->get($m);
+            $total[]   = (int) ($row?->total   ?? 0);
+            $selesai[] = (int) ($row?->selesai ?? 0);
+            $proses[]  = (int) ($row?->proses  ?? 0);
+            $ditolak[] = (int) ($row?->ditolak ?? 0);
         }
 
         return compact('labels', 'total', 'selesai', 'proses', 'ditolak');
     }
 
     // ── Surat per jenis (doughnut) ────────────────────────────────────────────
-    // Kolom 'jenis' di tabel surats berisi nilai enum seperti 'dinas', 'keluar', dll.
-    // Sesuaikan JENIS_LABEL di sini sesuai dengan nilai aktual di DB kamu.
+    // Sesuai enum DB: nota_dinas | surat_dinas | surat_keputusan | surat_pernyataan | surat_keterangan
     private function suratPerJenis(int $tahun): array
     {
         $jenisLabel = [
-            'dinas'       => 'Surat Dinas',
-            'keluar'      => 'Surat Keluar',
-            'masuk'       => 'Surat Masuk',
-            'tugas'       => 'Surat Tugas',
-            'keterangan'  => 'Surat Keterangan',
+            'nota_dinas'       => 'Nota Dinas',
+            'surat_dinas'      => 'Surat Dinas',
+            'surat_keputusan'  => 'Surat Keputusan',
+            'surat_pernyataan' => 'Surat Pernyataan',
+            'surat_keterangan' => 'Surat Keterangan',
         ];
 
         $rows = DB::table('surats')
@@ -86,20 +89,19 @@ class ChartController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        $labels = $rows->map(fn($r) => $jenisLabel[$r->jenis] ?? ucfirst($r->jenis))->values()->toArray();
-        $data   = $rows->pluck('total')->map(fn($v) => (int)$v)->toArray();
-
-        return compact('labels', 'data');
+        return [
+            'labels' => $rows->map(fn($r) => $jenisLabel[$r->jenis] ?? ucfirst($r->jenis))->values()->toArray(),
+            'data'   => $rows->pluck('total')->map(fn($v) => (int) $v)->toArray(),
+        ];
     }
 
-    // ── Status surat bulan ini (pie/doughnut) ─────────────────────────────────
-    private function suratPerStatus(int $tahun): array
+    // ── Status surat bulan ini (doughnut) ─────────────────────────────────────
+    // Enum DB: proses | selesai | ditolak
+    private function suratPerStatus(): array
     {
-        $bulan = now()->month;
-
         $rows = DB::table('surats')
-            ->whereYear('created_at', $tahun)
-            ->whereMonth('created_at', $bulan)
+            ->whereYear('created_at', now()->year)
+            ->whereMonth('created_at', now()->month)
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
             ->get()
@@ -112,88 +114,88 @@ class ChartController extends Controller
         ];
     }
 
-    // ── SLA: tepat waktu vs terlambat per bulan (stacked bar) ────────────────
-    // Menggunakan surat_tahapans untuk menghitung keterlambatan per tahap.
-    // Jika kolom deadline_sla tidak ada di surats, fallback ke perbandingan tahap.
+    // ── SLA: tepat waktu vs terlambat (stacked bar) ───────────────────────────
+    // Kolom deadline_sla SUDAH ADA di tabel surats kamu
     private function slaChart(int $tahun): array
     {
         $labels    = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
         $tepat     = array_fill(0, 12, 0);
         $terlambat = array_fill(0, 12, 0);
 
-        // Cek apakah kolom deadline_sla ada
-        $hasDeadline = \Schema::hasColumn('surats', 'deadline_sla');
+        // Baris yang punya deadline_sla → hitung tepat/terlambat dengan tepat
+        $withDeadline = DB::table('surats')
+            ->whereYear('created_at', $tahun)
+            ->whereNotNull('deadline_sla')
+            ->selectRaw('
+                MONTH(created_at) as bulan,
+                SUM(status = "selesai" AND deadline_sla >= updated_at) as tepat,
+                SUM(deadline_sla < NOW() AND status != "selesai")      as terlambat
+            ')
+            ->groupBy('bulan')
+            ->orderBy('bulan')
+            ->get()
+            ->keyBy('bulan');
 
-        if ($hasDeadline) {
-            $rows = DB::table('surats')
-                ->whereYear('created_at', $tahun)
-                ->whereNotNull('deadline_sla')
-                ->selectRaw('
-                    MONTH(created_at) as bulan,
-                    SUM(CASE WHEN status = "selesai" AND deadline_sla >= updated_at THEN 1 ELSE 0 END) as tepat,
-                    SUM(CASE WHEN deadline_sla < NOW() AND status != "selesai" THEN 1 ELSE 0 END) as terlambat
-                ')
-                ->groupBy('bulan')
-                ->orderBy('bulan')
-                ->get()
-                ->keyBy('bulan');
+        // Baris tanpa deadline_sla → fallback: selesai = tepat, ditolak = terlambat
+        $noDeadline = DB::table('surats')
+            ->whereYear('created_at', $tahun)
+            ->whereNull('deadline_sla')
+            ->selectRaw('
+                MONTH(created_at) as bulan,
+                SUM(status = "selesai") as tepat,
+                SUM(status = "ditolak") as terlambat
+            ')
+            ->groupBy('bulan')
+            ->orderBy('bulan')
+            ->get()
+            ->keyBy('bulan');
 
-            for ($m = 1; $m <= 12; $m++) {
-                $row            = $rows->get($m);
-                $tepat[$m-1]    = (int) ($row?->tepat     ?? 0);
-                $terlambat[$m-1]= (int) ($row?->terlambat ?? 0);
-            }
-        } else {
-            // Fallback: selesai = tepat, ditolak = terlambat (per bulan)
-            $rows = DB::table('surats')
-                ->whereYear('created_at', $tahun)
-                ->selectRaw('
-                    MONTH(created_at) as bulan,
-                    SUM(CASE WHEN status = "selesai" THEN 1 ELSE 0 END) as tepat,
-                    SUM(CASE WHEN status = "ditolak" THEN 1 ELSE 0 END) as terlambat
-                ')
-                ->groupBy('bulan')
-                ->get()
-                ->keyBy('bulan');
-
-            for ($m = 1; $m <= 12; $m++) {
-                $row            = $rows->get($m);
-                $tepat[$m-1]    = (int) ($row?->tepat     ?? 0);
-                $terlambat[$m-1]= (int) ($row?->terlambat ?? 0);
-            }
+        for ($m = 1; $m <= 12; $m++) {
+            $r1 = $withDeadline->get($m);
+            $r2 = $noDeadline->get($m);
+            $tepat[$m - 1]     = (int) ($r1?->tepat     ?? 0) + (int) ($r2?->tepat     ?? 0);
+            $terlambat[$m - 1] = (int) ($r1?->terlambat ?? 0) + (int) ($r2?->terlambat ?? 0);
         }
 
         return compact('labels', 'tepat', 'terlambat');
     }
 
-    // ── Distribusi surat berdasarkan tahap aktif (horizontal bar) ────────────
-    // Mengambil dari tabel surat_tahapans, bukan kolom tahap_sekarang di surats
+    // ── Distribusi surat aktif per tahap (horizontal bar) ────────────────────
+    // Tabel: surat_tahapans
+    // Kolom: surat_id, tahap (int urut), nama_tahap (varchar), status (menunggu/proses/selesai/ditolak)
     private function suratPerTahap(): array
     {
-        // Ambil surat yang masih proses, lalu cari tahap terakhir aktif / menunggu
-        $rows = DB::table('surat_tahapans')
-            ->join('surats', 'surat_tahapans.surat_id', '=', 'surats.id')
-            ->where('surats.status', 'proses')
-            ->where('surat_tahapans.status', 'menunggu')
-            ->selectRaw('surat_tahapans.nama_tahap as tahap, COUNT(*) as total')
-            ->groupBy('surat_tahapans.nama_tahap')
+        // Utama: ambil tahap yang sedang aktif dikerjakan (status = 'proses')
+        $rows = DB::table('surat_tahapans as st')
+            ->join('surats as s', 'st.surat_id', '=', 's.id')
+            ->where('s.status', 'proses')
+            ->where('st.status', 'proses')
+            ->selectRaw('st.nama_tahap as tahap, COUNT(*) as total')
+            ->groupBy('st.nama_tahap')
             ->orderByDesc('total')
             ->get();
 
-        // Jika nama_tahap tidak ada, fallback ke nomor tahap
+        // Fallback: tidak ada yang berstatus 'proses' → ambil tahap 'menunggu' paling awal per surat
         if ($rows->isEmpty()) {
-            $rows = DB::table('surat_tahapans')
-                ->join('surats', 'surat_tahapans.surat_id', '=', 'surats.id')
-                ->where('surats.status', 'proses')
-                ->selectRaw('CONCAT("Tahap ", surat_tahapans.tahap) as tahap, COUNT(*) as total')
-                ->groupBy('surat_tahapans.tahap')
-                ->orderBy('surat_tahapans.tahap')
+            $rows = DB::table('surat_tahapans as st')
+                ->join('surats as s', 'st.surat_id', '=', 's.id')
+                ->where('s.status', 'proses')
+                ->where('st.status', 'menunggu')
+                ->whereRaw('st.tahap = (
+                    SELECT MIN(st2.tahap)
+                    FROM surat_tahapans st2
+                    WHERE st2.surat_id = st.surat_id
+                      AND st2.status = "menunggu"
+                )')
+                ->selectRaw('st.nama_tahap as tahap, COUNT(*) as total')
+                ->groupBy('st.nama_tahap')
+                ->orderByDesc('total')
                 ->get();
         }
 
         return [
             'labels' => $rows->pluck('tahap')->toArray(),
-            'data'   => $rows->pluck('total')->map(fn($v) => (int)$v)->toArray(),
+            'data'   => $rows->pluck('total')->map(fn($v) => (int) $v)->toArray(),
         ];
     }
 
@@ -221,21 +223,22 @@ class ChartController extends Controller
     }
 
     // ── Top 5 pengusul terbanyak bulan ini (horizontal bar) ──────────────────
+    // surats.user_id → users.id | kolom nama: users.name
     private function topPengusul(int $tahun): array
     {
-        $rows = DB::table('surats')
-            ->join('users', 'surats.user_id', '=', 'users.id')
-            ->whereYear('surats.created_at', $tahun)
-            ->whereMonth('surats.created_at', now()->month)
-            ->selectRaw('users.name, COUNT(*) as total')
-            ->groupBy('users.id', 'users.name')
+        $rows = DB::table('surats as s')
+            ->join('users as u', 's.user_id', '=', 'u.id')
+            ->whereYear('s.created_at', $tahun)
+            ->whereMonth('s.created_at', now()->month)
+            ->selectRaw('u.name, COUNT(*) as total')
+            ->groupBy('u.id', 'u.name')
             ->orderByDesc('total')
             ->limit(5)
             ->get();
 
         return [
             'labels' => $rows->pluck('name')->toArray(),
-            'data'   => $rows->pluck('total')->map(fn($v) => (int)$v)->toArray(),
+            'data'   => $rows->pluck('total')->map(fn($v) => (int) $v)->toArray(),
         ];
     }
 }

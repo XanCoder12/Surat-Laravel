@@ -4,6 +4,7 @@
 @section('content')
 
 {{-- GREETING --}}
+<link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
     <div>
         <h4 class="fw-bold mb-1" style="color:#1e3a5f;">

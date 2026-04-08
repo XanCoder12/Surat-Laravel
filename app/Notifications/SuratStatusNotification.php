@@ -15,6 +15,7 @@ class SuratStatusNotification extends Notification
         public string $type,    // 'success' | 'warning' | 'danger' | 'info'
         public string $title,
         public string $message,
+        public $url,
     ) {}
 
     public function via(object $notifiable): array
@@ -29,6 +30,7 @@ class SuratStatusNotification extends Notification
             'type'     => $this->type,
             'title'    => $this->title,
             'message'  => $this->message,
+            'url'      => $this->url,
         ];
     }
 }

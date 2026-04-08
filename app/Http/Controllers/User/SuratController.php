@@ -4,13 +4,15 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Surat;
+use App\Models\User;
 use Carbon\Carbon;
+use App\Notifications\SuratMasukNotification;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Auth;    
 use Illuminate\Support\Facades\Storage;
 
-class SuratController extends Controller
+    class SuratController extends Controller
 {
     public function index(Request $request)
     {
@@ -78,6 +80,7 @@ class SuratController extends Controller
 
         // Inisialisasi semua tahapan
         $surat->initTahapan();
+        User::where('role', 'admin')->get()->each(fn($a) => $a->notify(new SuratMasukNotification($surat)));
 
         // Set tahap 2 jadi 'proses' (siap diverifikasi arsiparis)
         $surat->tahapans()->where('tahap', 2)->update(['status' => 'proses']);

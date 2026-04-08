@@ -59,12 +59,28 @@ class DashboardController extends Controller
                              ->limit(5)
                              ->get();
 
+        // Data surat dengan siapa saja yang telah memproses (bulan ini)
+        $suratDenganPengolah = Surat::whereMonth('created_at', $bulanIni)
+                                     ->whereYear('created_at', $tahunIni)
+                                     ->with([
+                                         'user',
+                                         'tahapans' => function ($query) {
+                                             $query->where('status', 'selesai')
+                                                   ->whereNotNull('diproses_oleh')
+                                                   ->with('diprosesByUser')
+                                                   ->orderBy('tahap');
+                                         }
+                                     ])
+                                     ->orderByDesc('created_at')
+                                     ->limit(8)
+                                     ->get();
+
         // Jumlah antrian untuk badge sidebar (share ke layout)
         $antrianCount = $antrian->count();
 
         return view('admin.dashboard', compact(
             'totalBulanIni', 'totalSelesai', 'totalProses', 'totalTerlambat',
-            'antrian', 'rekapJenis', 'suratTerbaru', 'antrianCount'
+            'antrian', 'rekapJenis', 'suratTerbaru', 'suratDenganPengolah', 'antrianCount'
         ));
     }
 }
