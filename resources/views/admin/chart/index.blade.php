@@ -3,513 +3,485 @@
 
 @section('content')
 
-{{-- FILTER TAHUN --}}
-<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+
+.chart-page { color: inherit; }
+
+.chart-top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; color: #000000ff; }
+.chart-top-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+.chart-top-sub { font-size: 12px; color: #6b7280; margin-top: 2px; font-family: 'DM Mono', monospace; }
+
+.chart-filter-row { display: flex; align-items: center; gap: 10px; }
+.chart-filter-row label { font-size: 12px; color: #6b7280; }
+.chart-filter-row select { padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; outline: none; border: 1px solid #000000ff; background: #fff; color: #111827; }
+.chart-refresh-btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; border: 1px solid #d1d5db; background: #fff; color: #374151; }
+.chart-refresh-btn:hover { background: #f3f4f6; border-color: #6366f1; color: #6366f1; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+@media(max-width:640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; transition: border-color .2s; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.stat-card:hover { border-color: #818cf866; }
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 12px 12px 0 0; }
+.stat-card.blue::before  { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.stat-card.green::before { background: linear-gradient(90deg, #16a34a, #4ade80); }
+.stat-card.amber::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+.stat-card.red::before   { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+.stat-label { font-size: 11px; color: #000000ff; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+.stat-num   { font-size: 32px; font-weight: 700; letter-spacing: -1px; font-family: 'DM Mono', monospace; }
+.stat-card.blue .stat-num  { color: #2563eb; }
+.stat-card.green .stat-num { color: #16a34a; }
+.stat-card.amber .stat-num { color: #d97706; }
+.stat-card.red .stat-num   { color: #dc2626; }
+.stat-note { font-size: 11px; color: #000000ff; margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+.charts-row  { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 20px; }
+.charts-row2 { display: grid; grid-template-columns: 5fr 7fr; gap: 14px; margin-bottom: 20px; }
+.charts-row3 { display: grid; grid-template-columns: 7fr 5fr; gap: 14px; margin-bottom: 20px; }
+.charts-row4 { display: grid; grid-template-columns: 1fr 1fr;  gap: 14px; }
+@media(max-width:800px) {
+    .charts-row, .charts-row2, .charts-row3, .charts-row4 { grid-template-columns: 1fr; }
+}
+
+.ch-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.ch-card-header { margin-bottom: 14px; }
+.ch-card-title { font-size: 13px; font-weight: 600; color: #111827; display: flex; align-items: center; gap: 8px; }
+.ch-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b82f6; display: inline-block; flex-shrink: 0; }
+.ch-dot.green  { background: #16a34a; }
+.ch-dot.amber  { background: #d97706; }
+.ch-dot.red    { background: #dc2626; }
+.ch-dot.purple { background: #7c3aed; }
+.ch-sub { font-size: 11px; color: #000000ff; margin-top: 3px; margin-left: 15px; font-family: 'DM Mono', monospace; }
+
+.toggle-grp { display: flex; gap: 4px; }
+.tog-btn { background: transparent; border: 1px solid #e5e7eb; color: #9ca3af; padding: 3px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; transition: all .15s; }
+.tog-btn:hover { border-color: #6366f144; color: #374151; }
+.tog-btn.active { background: #eff6ff; border-color: #3b82f6; color: #2563eb; }
+
+.legend-row  { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #6b7280; }
+.legend-dot  { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+.chart-wrap { position: relative; }
+
+table.ringkasan { width: 100%; border-collapse: collapse; }
+table.ringkasan thead th { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; font-weight: 500; }
+table.ringkasan tbody td { font-size: 12px; color: #6b7280; padding: 8px 0; border-bottom: 1px solid #f9fafb; }
+table.ringkasan tbody tr:last-child td { border-bottom: none; }
+table.ringkasan .num-cell { text-align: right; font-family: 'DM Mono', monospace; color: #111827; font-weight: 600; }
+.jenis-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #f3f4f6; font-size: 11px; color: #6b7280; }
+
+.debug-box { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 8px; padding: 12px; font-size: 12px; margin-bottom: 16px; display: none; }
+</style>
+
+<div class="chart-page">
+
+  {{-- TOP BAR --}}
+  <div class="chart-top-bar">
     <div>
-        <h5 class="fw-bold mb-0" style="color:#111827;">📊 Statistik & Grafik</h5>
-        <small class="text-muted">Data real-time dari database</small>
+      <div class="chart-top-title">Statistik & Grafik</div>
+      <div class="chart-top-sub">real-time · database</div>
     </div>
-    <div class="d-flex align-items-center gap-2">
-        <label style="font-size:13px;color:#6b7280;">Tahun:</label>
-        <select id="filter-tahun" class="form-select form-select-sm" style="width:100px;font-size:13px;border-radius:7px;">
-            @foreach(range(now()->year, now()->year - 3) as $y)
-                <option value="{{ $y }}" {{ $y == now()->year ? 'selected' : '' }}>{{ $y }}</option>
-            @endforeach
-        </select>
-        <button onclick="loadCharts()" class="btn btn-sm btn-primary"
-                style="background:#1e3a5f;border-color:#1e3a5f;border-radius:7px;font-size:12px;">
-            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-        </button>
+    <div class="chart-filter-row">
+      <label>Tahun</label>
+      <select id="filter-tahun">
+        @foreach(range(now()->year, now()->year - 3) as $y)
+          <option value="{{ $y }}" {{ $y == now()->year ? 'selected' : '' }}>{{ $y }}</option>
+        @endforeach
+      </select>
+      <button class="chart-refresh-btn" onclick="loadCharts()">
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+          <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+        </svg>
+        Refresh
+      </button>
     </div>
-</div>
+  </div>
 
-{{-- DEBUG: tampil jika ada error fetch (akan hilang sendiri kalau sukses) --}}
-<div id="debug-alert" class="alert alert-warning d-none" style="font-size:12px;"></div>
+  <div class="debug-box" id="debug-alert"></div>
 
-{{-- ROW 1: Stat cards mini --}}
-<div class="row g-3 mb-3" id="stat-cards">
-    <div class="col-6 col-md-3">
-        <div style="background:#1e3a5f;color:#fff;padding:16px 20px;border-radius:10px;">
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px;">Total Surat</div>
-            <div style="font-size:26px;font-weight:700;" id="sc-total">—</div>
-            <div style="font-size:11px;opacity:.6;">Tahun ini</div>
-        </div>
+  {{-- STAT CARDS --}}
+  <div class="stat-grid">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Surat</div>
+      <div class="stat-num" id="sc-total">—</div>
+      <div class="stat-note">tahun ini</div>
     </div>
-    <div class="col-6 col-md-3">
-        <div style="background:#15803d;color:#fff;padding:16px 20px;border-radius:10px;">
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px;">Selesai</div>
-            <div style="font-size:26px;font-weight:700;" id="sc-selesai">—</div>
-            <div style="font-size:11px;opacity:.6;">Tahun ini</div>
-        </div>
+    <div class="stat-card green">
+      <div class="stat-label">Selesai</div>
+      <div class="stat-num" id="sc-selesai">—</div>
+      <div class="stat-note">tahun ini</div>
     </div>
-    <div class="col-6 col-md-3">
-        <div style="background:#b45309;color:#fff;padding:16px 20px;border-radius:10px;">
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px;">Proses</div>
-            <div style="font-size:26px;font-weight:700;" id="sc-proses">—</div>
-            <div style="font-size:11px;opacity:.6;">Saat ini</div>
-        </div>
+    <div class="stat-card amber">
+      <div class="stat-label">Proses</div>
+      <div class="stat-num" id="sc-proses">—</div>
+      <div class="stat-note">saat ini</div>
     </div>
-    <div class="col-6 col-md-3">
-        <div style="background:#b91c1c;color:#fff;padding:16px 20px;border-radius:10px;">
-            <div style="font-size:11px;opacity:.7;margin-bottom:4px;">Ditolak</div>
-            <div style="font-size:26px;font-weight:700;" id="sc-ditolak">—</div>
-            <div style="font-size:11px;opacity:.6;">Tahun ini</div>
-        </div>
+    <div class="stat-card red">
+      <div class="stat-label">Ditolak</div>
+      <div class="stat-num" id="sc-ditolak">—</div>
+      <div class="stat-note">tahun ini</div>
     </div>
-</div>
+  </div>
 
-{{-- ROW 2: Surat per bulan (bar) + Status bulan ini (doughnut) --}}
-<div class="row g-3 mb-3">
-    <div class="col-12 col-lg-8">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div>
-                        <h6 class="fw-bold mb-0" style="color:#1e3a5f;">📈 Surat Per Bulan</h6>
-                        <small class="text-muted">Total, selesai, proses, ditolak</small>
-                    </div>
-                    <div class="d-flex gap-1">
-                        <button onclick="toggleBulanChart('bar')"  id="btn-bar"  class="btn btn-sm chart-toggle active-toggle" style="font-size:11px;border-radius:6px;padding:3px 10px;">Bar</button>
-                        <button onclick="toggleBulanChart('line')" id="btn-line" class="btn btn-sm chart-toggle"               style="font-size:11px;border-radius:6px;padding:3px 10px;">Line</button>
-                    </div>
-                </div>
-                <div style="height:260px;">
-                    <canvas id="chart-bulanan"></canvas>
-                </div>
-            </div>
+  {{-- ROW 1: Bulanan + Status --}}
+  <div class="charts-row">
+    <div class="ch-card">
+      <div class="ch-card-header" style="display:flex;align-items:flex-start;justify-content:space-between;">
+        <div>
+          <div class="ch-card-title"><span class="ch-dot"></span>Surat Per Bulan</div>
+          <div class="ch-sub">total · selesai · proses · ditolak</div>
+          <div class="legend-row" style="margin-top:10px;margin-left:0;">
+            <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span>Total</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#16a34a"></span>Selesai</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#d97706"></span>Proses</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#dc2626"></span>Ditolak</span>
+          </div>
         </div>
-    </div>
-    <div class="col-12 col-lg-4">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">🍩 Status Bulan Ini</h6>
-                <small class="text-muted">Distribusi status surat</small>
-                <div style="height:220px;margin-top:12px;">
-                    <canvas id="chart-status"></canvas>
-                </div>
-            </div>
+        <div class="toggle-grp">
+          <button class="tog-btn active" id="btn-bar"  onclick="toggleBulanChart('bar')">Bar</button>
+          <button class="tog-btn"        id="btn-line" onclick="toggleBulanChart('line')">Line</button>
         </div>
+      </div>
+      <div class="chart-wrap" style="height:240px;"><canvas id="chart-bulanan"></canvas></div>
     </div>
-</div>
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot green"></span>Status Bulan Ini</div>
+        <div class="ch-sub">distribusi status surat</div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="chart-status"></canvas></div>
+    </div>
+  </div>
 
-{{-- ROW 3: Per jenis (doughnut) + SLA (stacked bar) --}}
-<div class="row g-3 mb-3">
-    <div class="col-12 col-lg-5">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">📄 Jenis Surat</h6>
-                <small class="text-muted">Distribusi per jenis surat</small>
-                <div style="height:240px;margin-top:12px;">
-                    <canvas id="chart-jenis"></canvas>
-                </div>
-            </div>
-        </div>
+  {{-- ROW 2: Jenis + SLA --}}
+  <div class="charts-row2">
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot purple"></span>Jenis Surat</div>
+        <div class="ch-sub">distribusi per jenis</div>
+      </div>
+      <div class="chart-wrap" style="height:220px;"><canvas id="chart-jenis"></canvas></div>
     </div>
-    <div class="col-12 col-lg-7">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">⏱ Pemenuhan SLA Per Bulan</h6>
-                <small class="text-muted">Selesai tepat waktu vs ditolak/terlambat</small>
-                <div style="height:240px;margin-top:12px;">
-                    <canvas id="chart-sla"></canvas>
-                </div>
-            </div>
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot amber"></span>Pemenuhan SLA Per Bulan</div>
+        <div class="ch-sub">tepat waktu vs terlambat/ditolak</div>
+        <div class="legend-row" style="margin-top:10px;margin-left:0;">
+          <span class="legend-item"><span class="legend-dot" style="background:#16a34a"></span>Tepat Waktu</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#dc2626"></span>Terlambat / Ditolak</span>
         </div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chart-sla"></canvas></div>
     </div>
-</div>
+  </div>
 
-{{-- ROW 4: Trend harian + Tahap aktif --}}
-<div class="row g-3 mb-3">
-    <div class="col-12 col-lg-7">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">📅 Trend Surat 30 Hari Terakhir</h6>
-                <small class="text-muted">Jumlah pengajuan per hari</small>
-                <div style="height:220px;margin-top:12px;">
-                    <canvas id="chart-trend"></canvas>
-                </div>
-            </div>
-        </div>
+  {{-- ROW 3: Trend + Tahap --}}
+  <div class="charts-row3">
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot"></span>Trend 30 Hari Terakhir</div>
+        <div class="ch-sub">jumlah pengajuan per hari</div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chart-trend"></canvas></div>
     </div>
-    <div class="col-12 col-lg-5">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">🔢 Surat Aktif Per Tahap</h6>
-                <small class="text-muted">Distribusi tahap surat sedang proses</small>
-                <div style="height:220px;margin-top:12px;">
-                    <canvas id="chart-tahap"></canvas>
-                </div>
-            </div>
-        </div>
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot red"></span>Surat Aktif Per Tahap</div>
+        <div class="ch-sub">distribusi tahap sedang proses</div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chart-tahap"></canvas></div>
     </div>
-</div>
+  </div>
 
-{{-- ROW 5: Top pengusul + Ringkasan --}}
-<div class="row g-3">
-    <div class="col-12 col-lg-6">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-1" style="color:#1e3a5f;">🏆 Top Pengusul Surat Bulan Ini</h6>
-                <small class="text-muted">5 pegawai dengan pengajuan terbanyak</small>
-                <div style="height:220px;margin-top:12px;">
-                    <canvas id="chart-pengusul"></canvas>
-                </div>
-            </div>
-        </div>
+  {{-- ROW 4: Top Pengusul + Ringkasan --}}
+  <div class="charts-row4">
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot green"></span>Top Pengusul Bulan Ini</div>
+        <div class="ch-sub">5 pegawai pengajuan terbanyak</div>
+      </div>
+      <div class="chart-wrap" style="height:200px;"><canvas id="chart-pengusul"></canvas></div>
     </div>
-    <div class="col-12 col-lg-6">
-        <div class="card" style="border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.05);">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-3" style="color:#1e3a5f;">📋 Ringkasan Per Jenis</h6>
-                <table class="table table-sm" style="font-size:12px;">
-                    <thead>
-                        <tr style="color:#6b7280;">
-                            <th style="border:none;font-size:11px;">Jenis</th>
-                            <th style="border:none;font-size:11px;text-align:right;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbl-ringkasan">
-                        <tr><td colspan="2" class="text-muted text-center py-3">Memuat...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <div class="ch-card">
+      <div class="ch-card-header">
+        <div class="ch-card-title"><span class="ch-dot purple"></span>Ringkasan Per Jenis</div>
+        <div class="ch-sub">total pengajuan per kategori</div>
+      </div>
+      <table class="ringkasan">
+        <thead><tr><th style="text-align:left">Jenis</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody id="tbl-ringkasan">
+          <tr><td colspan="2" style="text-align:center;color:#9ca3af;padding:20px 0;">Memuat...</td></tr>
+        </tbody>
+      </table>
     </div>
-</div>
+  </div>
 
-{{-- Chart.js via CDN --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</div>{{-- .chart-page --}}
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-// ── Konstanta warna ───────────────────────────────────────────────────────────
+const CHART_DATA_URL = "{{ route('admin.chart.data') }}";
+
+// Warna disesuaikan dengan tema light (cocok dengan admin layout)
 const C = {
-    blue:   '#1e3a5f',
-    blueL:  'rgba(30,58,95,0.15)',
-    green:  '#15803d',
-    greenL: 'rgba(21,128,61,0.15)',
-    amber:  '#b45309',
-    amberL: 'rgba(180,83,9,0.15)',
-    red:    '#b91c1c',
-    redL:   'rgba(185,28,28,0.15)',
-    purple: '#6d28d9',
-    teal:   '#0f766e',
-    pink:   '#be185d',
+  blue:   '#3b82f6', blueA:  'rgba(59,130,246,0.12)',
+  green:  '#16a34a', greenA: 'rgba(22,163,74,0.12)',
+  amber:  '#d97706', amberA: 'rgba(217,119,6,0.12)',
+  red:    '#dc2626', redA:   'rgba(220,38,38,0.12)',
+  purple: '#7c3aed', teal:   '#0891b2', pink: '#db2777',
+  grid:   '#f3f4f6', text:   '#9ca3af',
 };
 
-// ── Registry chart ─────────────────────────────────────────────────────────────
 const charts = {};
-function destroyChart(id) {
-    if (charts[id]) { charts[id].destroy(); delete charts[id]; }
-}
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
 
-// ── Load semua data sekaligus ─────────────────────────────────────────────────
 function loadCharts() {
-    const tahun  = document.getElementById('filter-tahun').value;
-    const url    = "{{ route('admin.chart.data') }}?tahun=" + tahun;
-    const debug  = document.getElementById('debug-alert');
+  const tahun = document.getElementById('filter-tahun').value;
+  const debug = document.getElementById('debug-alert');
+  debug.style.display = 'none';
 
-    debug.classList.add('d-none');
-    debug.textContent = '';
-
-    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(r => {
-            if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + url);
-            return r.json();
-        })
-        .then(d => {
-            updateStatCards(d);
-            buildBulanChart(d.suratPerBulan);
-            buildStatusChart(d.suratPerStatus);
-            buildJenisChart(d.suratPerJenis);
-            buildSlaChart(d.slaChart);
-            buildTrendChart(d.trendHarian);
-            buildTahapChart(d.suratPerTahap);
-            buildPengusulChart(d.topPengusul);
-            buildTableRingkasan(d.suratPerJenis);
-        })
-        .catch(err => {
-            console.error('Chart load error:', err);
-            debug.textContent = '⚠️ Gagal load data chart: ' + err.message
-                + '. Cek Network tab di DevTools untuk detail.';
-            debug.classList.remove('d-none');
-        });
+  fetch(CHART_DATA_URL + '?tahun=' + tahun, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  })
+    .then(r => {
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' — ' + CHART_DATA_URL);
+      return r.json();
+    })
+    .then(d => {
+      updateStatCards(d);
+      buildBulanChart(d.suratPerBulan);
+      buildStatusChart(d.suratPerStatus);
+      buildJenisChart(d.suratPerJenis);
+      buildSlaChart(d.slaChart);
+      buildTrendChart(d.trendHarian);
+      buildTahapChart(d.suratPerTahap);
+      buildPengusulChart(d.topPengusul);
+      buildTableRingkasan(d.suratPerJenis);
+    })
+    .catch(err => {
+      console.error('Chart error:', err);
+      debug.textContent = '⚠ Gagal load data: ' + err.message + '. Buka DevTools → Network untuk detail.';
+      debug.style.display = 'block';
+    });
 }
 
-// ── Stat cards ────────────────────────────────────────────────────────────────
 function updateStatCards(d) {
-    const bln  = d.suratPerBulan;
-    const tot  = bln.total.reduce((a,b) => a+b, 0);
-    const sel  = bln.selesai.reduce((a,b) => a+b, 0);
-    const tol  = bln.ditolak.reduce((a,b) => a+b, 0);
-    document.getElementById('sc-total').textContent   = tot;
-    document.getElementById('sc-selesai').textContent = sel;
-    document.getElementById('sc-proses').textContent  = d.suratPerStatus.proses;
-    document.getElementById('sc-ditolak').textContent = tol;
+  const b = d.suratPerBulan;
+  document.getElementById('sc-total').textContent   = b.total.reduce((a, v) => a + v, 0);
+  document.getElementById('sc-selesai').textContent = b.selesai.reduce((a, v) => a + v, 0);
+  document.getElementById('sc-proses').textContent  = d.suratPerStatus.proses;
+  document.getElementById('sc-ditolak').textContent = b.ditolak.reduce((a, v) => a + v, 0);
 }
 
-// ── Chart: Surat per bulan (bar / line toggle) ────────────────────────────────
-let bulanType = 'bar';
-let bulanData = null;
+let bulanType = 'bar', bulanData = null;
 
 function buildBulanChart(data) {
-    bulanData = data;
-    destroyChart('bulanan');
-    const ctx    = document.getElementById('chart-bulanan').getContext('2d');
-    const isLine = bulanType === 'line';
-
-    const ds = (label, values, border, bgBar, bgLine) => ({
-        label,
-        data: values,
-        borderColor: border,
-        backgroundColor: isLine ? bgLine : bgBar,
-        borderWidth: 2,
-        fill: isLine,
-        tension: isLine ? 0.4 : 0,
-        pointRadius: isLine ? 3 : 0,
-        pointHoverRadius: 5,
-        ...(isLine ? {} : { borderRadius: 4 }),
-    });
-
-    charts['bulanan'] = new Chart(ctx, {
-        type: bulanType,
-        data: {
-            labels: data.labels,
-            datasets: [
-                ds('Total',   data.total,   C.blue,  C.blueL,  'rgba(30,58,95,0.12)'),
-                ds('Selesai', data.selesai, C.green, C.greenL, 'rgba(21,128,61,0.12)'),
-                ds('Proses',  data.proses,  C.amber, C.amberL, 'rgba(180,83,9,0.12)'),
-                ds('Ditolak', data.ditolak, C.red,   C.redL,   'rgba(185,28,28,0.12)'),
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                y: { beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: '#f3f4f6' } }
-            }
-        }
-    });
+  bulanData = data;
+  destroyChart('bulanan');
+  const ctx    = document.getElementById('chart-bulanan').getContext('2d');
+  const isLine = bulanType === 'line';
+  const ds = (label, values, color, colorA) => ({
+    label, data: values,
+    borderColor: color,
+    backgroundColor: isLine ? colorA : color + 'cc',
+    borderWidth: isLine ? 2 : 0,
+    fill: isLine, tension: isLine ? 0.4 : 0,
+    pointRadius: 0, pointHoverRadius: 4,
+    borderRadius: isLine ? 0 : 4, borderSkipped: false,
+  });
+  charts['bulanan'] = new Chart(ctx, {
+    type: bulanType,
+    data: {
+      labels: data.labels,
+      datasets: [
+        ds('Total',   data.total,   C.blue,  C.blueA),
+        ds('Selesai', data.selesai, C.green, C.greenA),
+        ds('Proses',  data.proses,  C.amber, C.amberA),
+        ds('Ditolak', data.ditolak, C.red,   C.redA),
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { font: { size: 11 }, color: C.text }, border: { color: C.grid } },
+        y: { beginAtZero: true, grid: { color: C.grid }, ticks: { font: { size: 11 }, precision: 0, color: C.text }, border: { color: C.grid } }
+      }
+    }
+  });
 }
 
 function toggleBulanChart(type) {
-    bulanType = type;
-    document.querySelectorAll('.chart-toggle').forEach(b => b.classList.remove('active-toggle'));
-    document.getElementById('btn-' + type).classList.add('active-toggle');
-    if (bulanData) buildBulanChart(bulanData);
+  bulanType = type;
+  document.querySelectorAll('.tog-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + type).classList.add('active');
+  if (bulanData) buildBulanChart(bulanData);
 }
 
-// ── Chart: Status bulan ini (doughnut) ───────────────────────────────────────
 function buildStatusChart(data) {
-    destroyChart('status');
-    const ctx = document.getElementById('chart-status').getContext('2d');
-    const total = data.proses + data.selesai + data.ditolak;
-
-    // Kalau semua 0, tampilkan placeholder
-    const values = total > 0
-        ? [data.proses, data.selesai, data.ditolak]
-        : [1, 0, 0];
-
-    charts['status'] = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Proses', 'Selesai', 'Ditolak'],
-            datasets: [{
-                data: values,
-                backgroundColor: total > 0
-                    ? [C.amber, C.green, C.red]
-                    : ['#e5e7eb', '#e5e7eb', '#e5e7eb'],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '68%',
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 16 } },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => total > 0
-                            ? ` ${ctx.label}: ${ctx.raw}`
-                            : ' Belum ada data bulan ini'
-                    }
-                }
-            }
-        }
-    });
-}
-
-// ── Chart: Per jenis (doughnut) ───────────────────────────────────────────────
-function buildJenisChart(data) {
-    destroyChart('jenis');
-    const ctx     = document.getElementById('chart-jenis').getContext('2d');
-    const palette = [C.blue, C.green, C.amber, C.purple, C.teal, C.pink];
-    const hasData = data.labels.length > 0;
-
-    charts['jenis'] = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: hasData ? data.labels : ['Belum ada data'],
-            datasets: [{
-                data: hasData ? data.data : [1],
-                backgroundColor: hasData ? palette.slice(0, data.labels.length) : ['#e5e7eb'],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            cutout: '60%',
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 12 } }
-            }
-        }
-    });
-}
-
-// ── Chart: SLA stacked bar ────────────────────────────────────────────────────
-function buildSlaChart(data) {
-    destroyChart('sla');
-    const ctx = document.getElementById('chart-sla').getContext('2d');
-    charts['sla'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [
-                { label: 'Tepat Waktu / Selesai', data: data.tepat,     backgroundColor: C.green, borderRadius: 4, stack: 'sla' },
-                { label: 'Terlambat / Ditolak',   data: data.terlambat, backgroundColor: C.red,   borderRadius: 4, stack: 'sla' },
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } } },
-            scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
-                y: { stacked: true, beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: '#f3f4f6' } }
-            }
-        }
-    });
-}
-
-// ── Chart: Trend harian (line area) ──────────────────────────────────────────
-function buildTrendChart(data) {
-    destroyChart('trend');
-    const ctx = document.getElementById('chart-trend').getContext('2d');
-    charts['trend'] = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: 'Pengajuan',
-                data: data.data,
-                borderColor: C.blue,
-                backgroundColor: C.blueL,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 2,
-                pointHoverRadius: 5,
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 10 } },
-                y: { beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: '#f3f4f6' } }
-            }
-        }
-    });
-}
-
-// ── Chart: Surat aktif per tahap (horizontal bar) ─────────────────────────────
-function buildTahapChart(data) {
-    destroyChart('tahap');
-    const ctx = document.getElementById('chart-tahap').getContext('2d');
-    const shortLabels = (data.labels || []).map(l => l.length > 22 ? l.substring(0, 20) + '…' : l);
-    const hasData = shortLabels.length > 0;
-
-    charts['tahap'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: hasData ? shortLabels : ['Tidak ada surat proses'],
-            datasets: [{
-                label: 'Surat',
-                data: hasData ? data.data : [0],
-                backgroundColor: C.blue,
-                borderRadius: 4,
-                borderSkipped: false
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 }, grid: { color: '#f3f4f6' } },
-                y: { ticks: { font: { size: 10 } }, grid: { display: false } }
-            }
-        }
-    });
-}
-
-// ── Chart: Top pengusul (horizontal bar) ──────────────────────────────────────
-function buildPengusulChart(data) {
-    destroyChart('pengusul');
-    const ctx     = document.getElementById('chart-pengusul').getContext('2d');
-    const palette = [C.blue, C.green, C.amber, C.purple, C.teal];
-    const hasData = data.labels.length > 0;
-
-    charts['pengusul'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: hasData ? data.labels : ['Belum ada data'],
-            datasets: [{
-                label: 'Surat Diajukan',
-                data: hasData ? data.data : [0],
-                backgroundColor: hasData ? palette.slice(0, data.labels.length) : ['#e5e7eb'],
-                borderRadius: 6,
-                borderSkipped: false
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { beginAtZero: true, ticks: { font: { size: 11 }, precision: 0 }, grid: { color: '#f3f4f6' } },
-                y: { ticks: { font: { size: 11 } }, grid: { display: false } }
-            }
-        }
-    });
-}
-
-// ── Tabel ringkasan per jenis ──────────────────────────────────────────────────
-function buildTableRingkasan(data) {
-    const tbody = document.getElementById('tbl-ringkasan');
-    if (!data.labels || !data.labels.length) {
-        tbody.innerHTML = '<tr><td colspan="2" class="text-muted text-center py-3">Belum ada data tahun ini</td></tr>';
-        return;
+  destroyChart('status');
+  const ctx   = document.getElementById('chart-status').getContext('2d');
+  const total = data.proses + data.selesai + data.ditolak;
+  charts['status'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Proses', 'Selesai', 'Ditolak'],
+      datasets: [{
+        data: total > 0 ? [data.proses, data.selesai, data.ditolak] : [1, 0, 0],
+        backgroundColor: total > 0 ? [C.amber, C.green, C.red] : ['#e5e7eb', '#e5e7eb', '#e5e7eb'],
+        borderColor: '#fff', borderWidth: 3, hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '72%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10, padding: 14, color: '#6b7280' } },
+        tooltip: { callbacks: { label: c => total > 0 ? ` ${c.label}: ${c.raw}` : ' Belum ada data' } }
+      }
     }
-    tbody.innerHTML = data.labels.map((label, i) => `
-        <tr>
-            <td>${label}</td>
-            <td style="text-align:right"><strong>${data.data[i]}</strong></td>
-        </tr>
-    `).join('');
+  });
 }
 
-// ── Style toggle button ────────────────────────────────────────────────────────
-const style = document.createElement('style');
-style.textContent = `
-    .chart-toggle { border:1px solid #e5e7eb; background:transparent; color:#6b7280; }
-    .chart-toggle:hover { background:#f9fafb; }
-    .active-toggle { background:#1e3a5f !important; color:#fff !important; border-color:#1e3a5f !important; }
-`;
-document.head.appendChild(style);
+function buildJenisChart(data) {
+  destroyChart('jenis');
+  const ctx     = document.getElementById('chart-jenis').getContext('2d');
+  const palette = [C.blue, C.green, C.amber, C.purple, C.teal, C.pink];
+  const hasData = data.labels.length > 0;
+  charts['jenis'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: hasData ? data.labels : ['Belum ada data'],
+      datasets: [{
+        data: hasData ? data.data : [1],
+        backgroundColor: hasData ? palette.slice(0, data.labels.length) : ['#e5e7eb'],
+        borderColor: '#fff', borderWidth: 3, hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10, padding: 10, color: '#6b7280' } } }
+    }
+  });
+}
 
-// ── Load saat halaman ready ────────────────────────────────────────────────────
+function buildSlaChart(data) {
+  destroyChart('sla');
+  const ctx = document.getElementById('chart-sla').getContext('2d');
+  charts['sla'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: 'Tepat Waktu', data: data.tepat,     backgroundColor: C.green + 'cc', borderRadius: 4, stack: 's', borderSkipped: false },
+        { label: 'Terlambat',   data: data.terlambat, backgroundColor: C.red   + 'cc', borderRadius: 4, stack: 's', borderSkipped: false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, grid: { color: C.grid }, ticks: { font: { size: 10 }, color: C.text }, border: { color: C.grid } },
+        y: { stacked: true, beginAtZero: true, grid: { color: C.grid }, ticks: { font: { size: 10 }, precision: 0, color: C.text }, border: { color: C.grid } }
+      }
+    }
+  });
+}
+
+function buildTrendChart(data) {
+  destroyChart('trend');
+  const ctx = document.getElementById('chart-trend').getContext('2d');
+  charts['trend'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        data: data.data,
+        borderColor: C.blue, backgroundColor: C.blueA,
+        fill: true, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: C.grid }, ticks: { font: { size: 10 }, maxTicksLimit: 10, color: C.text }, border: { color: C.grid } },
+        y: { beginAtZero: true, grid: { color: C.grid }, ticks: { font: { size: 10 }, precision: 0, color: C.text }, border: { color: C.grid } }
+      }
+    }
+  });
+}
+
+function buildTahapChart(data) {
+  destroyChart('tahap');
+  const ctx    = document.getElementById('chart-tahap').getContext('2d');
+  const labels = (data.labels || []).map(l => l.length > 22 ? l.substring(0, 20) + '…' : l);
+  const hasData = labels.length > 0;
+  document.querySelector('#chart-tahap').parentElement.style.height =
+    Math.max(hasData ? labels.length * 40 + 60 : 100, 200) + 'px';
+  charts['tahap'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hasData ? labels : ['Tidak ada surat proses'],
+      datasets: [{ data: hasData ? data.data : [0], backgroundColor: C.red + 'cc', borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: C.grid }, ticks: { font: { size: 10 }, precision: 0, color: C.text }, border: { color: C.grid } },
+        y: { grid: { display: false }, ticks: { font: { size: 10 }, color: C.text }, border: { color: C.grid } }
+      }
+    }
+  });
+}
+
+function buildPengusulChart(data) {
+  destroyChart('pengusul');
+  const ctx     = document.getElementById('chart-pengusul').getContext('2d');
+  const palette = [C.blue, C.green, C.amber, C.purple, C.teal];
+  const hasData = data.labels.length > 0;
+  document.querySelector('#chart-pengusul').parentElement.style.height =
+    Math.max(hasData ? data.labels.length * 40 + 60 : 100, 200) + 'px';
+  charts['pengusul'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: hasData ? data.labels : ['Belum ada data'],
+      datasets: [{
+        data: hasData ? data.data : [0],
+        backgroundColor: hasData ? palette.slice(0, data.labels.length).map(c => c + 'cc') : ['#e5e7eb'],
+        borderRadius: 6, borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, grid: { color: C.grid }, ticks: { font: { size: 10 }, precision: 0, color: C.text }, border: { color: C.grid } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 }, color: C.text }, border: { color: C.grid } }
+      }
+    }
+  });
+}
+
+function buildTableRingkasan(data) {
+  const tbody  = document.getElementById('tbl-ringkasan');
+  const colors = ['#3b82f6', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777'];
+  if (!data.labels || !data.labels.length) {
+    tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#9ca3af;padding:16px 0;">Belum ada data</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.labels.map((label, i) => `
+    <tr>
+      <td><span class="jenis-badge" style="border-left:2px solid ${colors[i % colors.length]};padding-left:8px;">${label}</span></td>
+      <td class="num-cell">${data.data[i]}</td>
+    </tr>
+  `).join('');
+}
+
 document.addEventListener('DOMContentLoaded', loadCharts);
 </script>
 
