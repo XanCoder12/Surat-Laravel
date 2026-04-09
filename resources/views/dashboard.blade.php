@@ -4,14 +4,15 @@
 @section('content')
 
 {{-- GREETING --}}
-<link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+<link rel="icon" href="{{ asset('images/BPSUML2.png') }}">
+
 <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
     <div>
         <h4 class="fw-bold mb-1" style="color:#1e3a5f;">
             👋 Halo, {{ Str::words(Auth::user()->name, 1, '') }}!
         </h4>
         <p class="text-muted mb-0" style="font-size:13px;">
-            {{ now()->translatedFormat('l, d F Y') }} · Selamat datang di Sistem Surat Metrologi
+            {{ now()->translatedFormat('l, d F Y') }} · Selamat datang di Manajemen/Monitoring Surat BP SUML
         </p>
     </div>
     <a href="{{ route('user.surat.create') }}" class="btn btn-primary d-flex align-items-center gap-2"
@@ -89,138 +90,146 @@
                         </a>
                     </div>
                 @else
-                    {{-- Surat list accordion --}}
-                    <div class="accordion accordion-flush" id="suratAccordion">
-                    @foreach($suratTerbaru as $i => $surat)
-                        <div class="accordion-item border-0 border-bottom">
-                            <div class="accordion-header">
-                                <button class="accordion-button {{ $i > 0 ? 'collapsed' : '' }} py-3 px-4"
-                                        type="button"
-                                        data-bs-toggle="collapse"
-                                        data-bs-target="#surat{{ $surat->id }}"
-                                        style="font-size:13px; background:transparent; box-shadow:none;">
-                                    <div class="d-flex align-items-start gap-3 w-100 me-2">
-                                        {{-- Status dot --}}
-                                        <div style="
-                                            width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:4px;
-                                            background:{{ $surat->status === 'selesai' ? '#22c55e' : ($surat->status === 'ditolak' ? '#ef4444' : '#f59e0b') }}">
+                    {{-- Surat list dengan Alpine.js --}}
+                    <div x-data="{ expanded: {{ $suratTerbaru->first()->id ?? 'null' }} }">
+                    @foreach($suratTerbaru as $surat)
+                        <div class="border-bottom">
+                            {{-- Header surat --}}
+                            <button class="d-flex align-items-start gap-3 w-100 px-4 py-3 border-0 bg-transparent"
+                                    type="button"
+                                    @click="expanded = (expanded === {{ $surat->id }} ? null : {{ $surat->id }})"
+                                    style="cursor:pointer; transition:background 0.15s;"
+                                    onmouseover="this.style.background='#f9fafb'"
+                                    onmouseout="this.style.background='transparent'">
+                                {{-- Status dot --}}
+                                <div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;
+                                    background:{{ $surat->status === 'selesai' ? '#22c55e' : ($surat->status === 'ditolak' ? '#ef4444' : '#f59e0b') }}">
+                                </div>
+                                <div class="flex-1 min-w-0 text-start">
+                                    <div class="fw-semibold" style="color:#111827;font-size:13px;">
+                                        {{ $surat->judul }}
+                                    </div>
+                                    <div class="d-flex gap-2 mt-1 flex-wrap">
+                                        <span class="badge rounded-pill" style="font-size:10px;background:#ede9fe;color:#6d28d9;">
+                                            {{ $surat->jenis_label }}
+                                        </span>
+                                        <span class="badge rounded-pill badge-{{ $surat->sifat }}" style="font-size:10px;">
+                                            {{ ucfirst($surat->sifat) }}
+                                        </span>
+                                        <span class="text-muted" style="font-size:11px;">
+                                            Tahap {{ $surat->tahap_sekarang }}/10
+                                        </span>
+                                    </div>
+                                </div>
+                                {{-- SLA Badge --}}
+                                <div class="flex-shrink-0">
+                                    @if($surat->status === 'selesai')
+                                        <span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;font-size:10px;">✓ Selesai</span>
+                                    @elseif($surat->status === 'ditolak')
+                                        <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:10px;">✗ Ditolak</span>
+                                    @elseif($surat->sla_status === 'terlambat')
+                                        <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:10px;">⚠ SLA!</span>
+                                    @else
+                                        <span class="badge rounded-pill" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">⏱ Proses</span>
+                                    @endif
+                                </div>
+                                {{-- Arrow icon --}}
+                                <div class="flex-shrink-0 text-muted"
+                                     x-bind:class="{ 'rotate-180': expanded === {{ $surat->id }} }"
+                                     style="transition:transform 0.2s;">
+                                    <i class="bi bi-chevron-down"></i>
+                                </div>
+                            </button>
+
+                            {{-- Tracking Panel --}}
+                            <div x-show="expanded === {{ $surat->id }}"
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 -translate-y-2"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-transition:leave="transition ease-in duration-150"
+                                 x-transition:leave-start="opacity-100 translate-y-0"
+                                 x-transition:leave-end="opacity-0 -translate-y-2"
+                                 x-cloak
+                                 class="px-4 pb-3"
+                                 style="background:#fafbfc;">
+
+                                {{-- Progress bar --}}
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <div class="progress flex-1" style="height:6px;border-radius:99px;">
+                                        <div class="progress-bar"
+                                             style="width:{{ $surat->proses_persen }}%;background:#1e3a5f;border-radius:99px;">
                                         </div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="fw-semibold text-truncate" style="color:#111827; max-width:280px;">
-                                                {{ $surat->judul }}
+                                    </div>
+                                    <span style="font-size:11px;font-weight:600;color:#1e3a5f;">
+                                        {{ $surat->proses_persen }}%
+                                    </span>
+                                </div>
+
+                                {{-- Tracking steps --}}
+                                <div class="tracking-steps">
+                                @foreach($surat->tahapans as $tahapan)
+                                    <div class="step-item {{ $tahapan->status === 'selesai' ? 'done' : '' }}">
+                                        <div style="position:relative;">
+                                            <div class="step-circle {{ $tahapan->status }}">
+                                                @if($tahapan->status === 'selesai') <i class="bi bi-check-lg"></i>
+                                                @elseif($tahapan->status === 'proses') <i class="bi bi-arrow-right"></i>
+                                                @elseif($tahapan->status === 'ditolak') <i class="bi bi-x-lg"></i>
+                                                @else {{ $tahapan->tahap }}
+                                                @endif
                                             </div>
-                                            <div class="d-flex gap-2 mt-1 flex-wrap">
-                                                <span class="badge rounded-pill" style="font-size:10px; background:#ede9fe; color:#6d28d9;">
-                                                    {{ $surat->jenis_label }}
-                                                </span>
-                                                <span class="badge rounded-pill badge-{{ $surat->sifat }}" style="font-size:10px;">
-                                                    {{ ucfirst($surat->sifat) }}
-                                                </span>
-                                                <span class="text-muted" style="font-size:11px;">
-                                                    Tahap {{ $surat->tahap_sekarang }}/10
-                                                </span>
-                                            </div>
+                                            @if(!$loop->last)
+                                                <div class="step-line"></div>
+                                            @endif
                                         </div>
-                                        {{-- SLA / Status badge --}}
-                                        <div class="ms-auto flex-shrink-0">
-                                            @if($surat->status === 'selesai')
-                                                <span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;font-size:10px;">✓ Selesai</span>
-                                            @elseif($surat->status === 'ditolak')
-                                                <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:10px;">✗ Ditolak</span>
-                                            @elseif($surat->sla_status === 'terlambat')
-                                                <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:10px;">⚠ SLA!</span>
-                                            @else
-                                                <span class="badge rounded-pill" style="background:#dbeafe;color:#1d4ed8;font-size:10px;">⏱ Proses</span>
+                                        <div class="step-content">
+                                            <div class="step-title {{ $tahapan->status }}">
+                                                {{ $tahapan->nama_tahap }}
+                                            </div>
+                                            @if($tahapan->selesai_pada)
+                                                <div class="step-meta">
+                                                    <i class="bi bi-clock me-1"></i>
+                                                    {{ $tahapan->selesai_pada->format('d M Y, H:i') }}
+                                                    @if($tahapan->diprosesByUser)
+                                                        · {{ $tahapan->diprosesByUser->name }}
+                                                    @endif
+                                                </div>
+                                            @elseif($tahapan->status === 'proses')
+                                                <div class="step-meta" style="color:#1d4ed8;">
+                                                    <i class="bi bi-hourglass-split me-1"></i> Sedang diproses...
+                                                </div>
+                                            @endif
+                                            @if($tahapan->catatan)
+                                                <div class="step-note">
+                                                    <i class="bi bi-chat-left-text me-1"></i>{{ $tahapan->catatan }}
+                                                </div>
                                             @endif
                                         </div>
                                     </div>
-                                </button>
-                            </div>
+                                @endforeach
+                                </div>
 
-                            {{-- TRACKING PANEL --}}
-                            <div id="surat{{ $surat->id }}"
-                                 class="accordion-collapse collapse {{ $i === 0 ? 'show' : '' }}"
-                                 data-bs-parent="#suratAccordion">
-                                <div class="accordion-body px-4 pt-0 pb-3">
-
-                                    {{-- Progress bar --}}
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        <div class="progress flex-1" style="height:6px; border-radius:99px; flex:1;">
-                                            <div class="progress-bar" role="progressbar"
-                                                 style="width:{{ $surat->proses_persen }}%; background:#1e3a5f; border-radius:99px;">
-                                            </div>
-                                        </div>
-                                        <span style="font-size:11px; font-weight:600; color:#1e3a5f; white-space:nowrap;">
-                                            {{ $surat->proses_persen }}%
-                                        </span>
+                                {{-- Nomor surat --}}
+                                @if($surat->nomor_surat)
+                                    <div class="alert alert-success py-2 px-3 mt-2 mb-0" style="font-size:12px;border-radius:8px;">
+                                        <i class="bi bi-hash me-1"></i>
+                                        <strong>Nomor Surat:</strong> {{ $surat->nomor_surat }}
+                                        · {{ $surat->tanggal_surat?->format('d M Y') }}
                                     </div>
+                                @endif
 
-                                    {{-- Tracking steps --}}
-                                    <div class="tracking-steps">
-                                    @foreach($surat->tahapans as $tahapan)
-                                        <div class="step-item {{ $tahapan->status === 'selesai' ? 'done' : '' }}">
-                                            <div style="position:relative;">
-                                                <div class="step-circle {{ $tahapan->status }}">
-                                                    @if($tahapan->status === 'selesai') <i class="bi bi-check-lg"></i>
-                                                    @elseif($tahapan->status === 'proses') <i class="bi bi-arrow-right"></i>
-                                                    @elseif($tahapan->status === 'ditolak') <i class="bi bi-x-lg"></i>
-                                                    @else {{ $tahapan->tahap }}
-                                                    @endif
-                                                </div>
-                                                @if(!$loop->last)
-                                                    <div class="step-line"></div>
-                                                @endif
-                                            </div>
-                                            <div class="step-content">
-                                                <div class="step-title {{ $tahapan->status }}">
-                                                    {{ $tahapan->nama_tahap }}
-                                                </div>
-                                                @if($tahapan->selesai_pada)
-                                                    <div class="step-meta">
-                                                        <i class="bi bi-clock me-1"></i>
-                                                        {{ $tahapan->selesai_pada->format('d M Y, H:i') }}
-                                                        @if($tahapan->diprosesByUser)
-                                                            · {{ $tahapan->diprosesByUser->name }}
-                                                        @endif
-                                                    </div>
-                                                @elseif($tahapan->status === 'proses')
-                                                    <div class="step-meta" style="color:#1d4ed8;">
-                                                        <i class="bi bi-hourglass-split me-1"></i> Sedang diproses...
-                                                    </div>
-                                                @endif
-                                                @if($tahapan->catatan)
-                                                    <div class="step-note">
-                                                        <i class="bi bi-chat-left-text me-1"></i>{{ $tahapan->catatan }}
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
+                                {{-- Surat ditolak --}}
+                                @if($surat->status === 'ditolak')
+                                    <div class="alert alert-danger py-2 px-3 mt-2 mb-0" style="font-size:12px;border-radius:8px;">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        <strong>Surat ditolak.</strong> Silakan ajukan ulang dengan perbaikan.
                                     </div>
+                                @endif
 
-                                    {{-- Info nomor surat jika sudah ada --}}
-                                    @if($surat->nomor_surat)
-                                        <div class="alert alert-success py-2 px-3 mt-2 mb-0" style="font-size:12px; border-radius:8px;">
-                                            <i class="bi bi-hash me-1"></i>
-                                            <strong>Nomor Surat:</strong> {{ $surat->nomor_surat }}
-                                            · {{ $surat->tanggal_surat?->format('d M Y') }}
-                                        </div>
-                                    @endif
-
-                                    {{-- Surat ditolak: info --}}
-                                    @if($surat->status === 'ditolak')
-                                        <div class="alert alert-danger py-2 px-3 mt-2 mb-0" style="font-size:12px; border-radius:8px;">
-                                            <i class="bi bi-x-circle me-1"></i>
-                                            <strong>Surat ditolak.</strong> Silakan ajukan ulang dengan perbaikan.
-                                        </div>
-                                    @endif
-
-                                    <div class="text-end mt-2">
-                                        <a href="{{ route('user.surat.show', $surat) }}"
-                                           class="btn btn-sm" style="font-size:11px; color:#1e3a5f; border:1px solid #e5e7eb; border-radius:7px;">
-                                            Detail lengkap →
-                                        </a>
-                                    </div>
+                                <div class="text-end mt-2">
+                                    <a href="{{ route('user.surat.show', $surat) }}"
+                                       class="btn btn-sm" style="font-size:11px;color:#1e3a5f;border:1px solid #e5e7eb;border-radius:7px;">
+                                        Detail lengkap →
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -238,10 +247,11 @@
         <div class="card card-custom mb-3">
             <div class="card-body p-0">
                 <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3 border-bottom">
-                    <h6 class="fw-bold mb-0" style="color:#1e3a5f;">
+                    <h6 class="fw-bold mb-0 d-flex align-items-center gap-2" style="color:#1e3a5f;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
                             <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
-                        </svg> Notifikasi Terbaru
+                        </svg>
+                        <span>Notifikasi Terbaru</span>
                     </h6>
                     @if(auth()->user()->unreadNotifications->count() > 0)
                         <span class="badge rounded-pill bg-danger" style="font-size:10px;">
@@ -251,7 +261,7 @@
                 </div>
                 <div style="max-height:240px; overflow-y:auto;">
                     @forelse(auth()->user()->notifications->take(6) as $notif)
-                        <a href="{{ route('user.notif.read', $notif->id) }}"
+                        <a href="{{ route('notif.read', $notif->id) }}"
                            class="d-flex align-items-start gap-3 px-4 py-3 text-decoration-none border-bottom
                                   {{ $notif->read_at ? '' : 'bg-light' }}"
                            style="transition:background 0.1s;">
