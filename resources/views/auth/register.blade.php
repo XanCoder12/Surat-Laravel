@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daftar — Sistem Surat Metrologi</title>
-    <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" href="{{ asset('images/BPSUML2.png') }}">
+
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -39,11 +40,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow-y: auto;
             position: relative;
+            overflow-x: hidden;
         }
 
-        /* ── Background layers ── */
         .bg-layer { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
 
         .bg-gradient {
@@ -412,13 +413,13 @@
 
             <div class="logo-outer">
                 <div class="logo-inner">
-                    <img src="{{ asset('images/logo.png') }}" alt="Logo Dinas">
+                    <img src="{{ asset('images/BPSUML2.png') }}" alt="Logo Dinas">
                 </div>
             </div>
 
-            <div class="brand-title">Dinas Perdagangan<br>dan Perindustrian</div>
+            <div class="brand-title">Balai Pengelola SUML<br>dan Perindustrian</div>
             <div class="divider-line"></div>
-            <div class="brand-sub">Sistem Informasi<br>Manajemen Surat<br>Metrologi Legal</div>
+            <div class="brand-sub">Sistem Informasi<br>Manajemen/Monitoring Surat<br>Balai Pengelola SUML</div>
             <div class="divider-line"></div>
 
             <div class="info-badge">
@@ -476,7 +477,7 @@
                         @enderror
                     </div>
 
-                    <!-- Email -->
+                   
                     <div class="field-group field-full">
                         <label class="field-label" for="email">Alamat Email</label>
                         <div class="input-wrap">
@@ -486,6 +487,27 @@
                             <i class="bi bi-envelope input-icon"></i>
                         </div>
                         @error('email')
+                            <p class="error-text"><i class="bi bi-x-circle-fill" style="font-size:10px;"></i> {{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- NIP -->
+                    <div class="field-group field-full">
+                        <label class="field-label" for="nip">
+                            NIP (Nomor Induk Pegawai)
+                            <span style="opacity:.5; font-weight:400; text-transform:none; letter-spacing:0; font-size:10px;">&nbsp;(opsional)</span>
+                        </label>
+                        <div class="input-wrap">
+                            <input class="field-input" id="nip" type="text" name="nip"
+                                value="{{ old('nip') }}" placeholder="Masukkan NIP Anda (jika ada)"
+                                autocomplete="off">
+                            <i class="bi bi-person-badge input-icon"></i>
+                        </div>
+                        <p class="field-hint" style="color: rgba(255,255,255,0.45); font-size:10.5px; margin-top:4px;">
+                            <i class="bi bi-info-circle" style="font-size:10px;"></i>
+                            NIP dapat digunakan untuk login bersama dengan email
+                        </p>
+                        @error('nip')
                             <p class="error-text"><i class="bi bi-x-circle-fill" style="font-size:10px;"></i> {{ $message }}</p>
                         @enderror
                     </div>
@@ -570,7 +592,7 @@
         </div>
 
         <div class="footer-bar">
-            <span>&copy; {{ date('Y') }} Dinas Perdagangan dan Perindustrian &mdash; Hak cipta dilindungi undang-undang</span>
+            <span>&copy; {{ date('Y') }} Balai Pengelola SUML &mdash; Hak cipta dilindungi undang-undang</span>
         </div>
     </div>
 
