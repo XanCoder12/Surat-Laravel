@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Dashboard' }} — Surat Metrologi</title>
+    <title>{{ $title ?? 'Dashboard' }} — Surat Balai Pengelola SUML</title>
+    <link rel="icon" href="{{ asset('images/BPSUML2.png') }}">
 
     {{-- Bootstrap 5 --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -295,8 +296,8 @@
 <nav class="navbar navbar-main d-flex align-items-center justify-content-between">
     {{-- Brand --}}
     <a class="navbar-brand-text text-decoration-none" href="{{ route('dashboard') }}">
-        ⚖️ Surat Metrologi
-        <small>Balai Metrologi Legal</small>
+        ⚖️ Surat Balai Pengelola SUML
+        <small>Balai Penglo SUML Legal</small>
     </a>
 
     {{-- Nav Links --}}
@@ -317,6 +318,10 @@
            class="nav-link-item {{ request()->routeIs('user.template.*') ? 'active' : '' }}">
             <i class="bi bi-file-earmark-word"></i> Template
         </a>
+        <a href="{{ route('user.about.index') }}"
+           class="nav-link-item {{ request()->routeIs('user.about.*') ? 'active' : '' }}">
+            <i class="bi bi-file-earmark-word"></i> About
+        </a>
     </div>
 
     {{-- Right: notif + avatar --}}
@@ -336,17 +341,24 @@
             <div class="dropdown-menu notif-dropdown dropdown-menu-end" aria-labelledby="notif-toggle">
                 <div class="notif-header">
                     <span><i class="bi bi-bell me-1"></i> Notifikasi</span>
-                    @if($unreadNotif > 0)
-                        <a href="{{ route('user.notif.readAll') }}"
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        @if($unreadNotif > 0)
+                            <a href="{{ route('notif.readAll') }}"
+                               class="text-decoration-none" style="font-size:11px; color:#2563eb;"
+                               onclick="event.preventDefault(); document.getElementById('readall-form').submit();">
+                                Tandai semua dibaca
+                            </a>
+                        @endif
+                        <a href="{{ route('dashboard') }}"
                            class="text-decoration-none" style="font-size:11px; color:#2563eb;"
-                           onclick="event.preventDefault(); document.getElementById('readall-form').submit();">
-                            Tandai semua dibaca
+                           title="Refresh notifikasi">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
                         </a>
-                    @endif
+                    </div>
                 </div>
 
                 @forelse(auth()->user()->notifications->take(10) as $notif)
-                    <a href="{{ route('user.notif.read', $notif->id) }}"
+                    <a href="{{ route('notif.read', $notif->id) }}"
                        class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
                         <div class="notif-icon {{ $notif->data['type'] ?? 'info' }}">
                             @switch($notif->data['type'] ?? 'info')
@@ -425,9 +437,11 @@
 
 {{-- Hidden forms --}}
 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
-<form id="readall-form" action="{{ route('user.notif.readAll') }}" method="POST" class="d-none">@csrf</form>
+<form id="readall-form" action="{{ route('notif.readAll') }}" method="POST" class="d-none">@csrf</form>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+@vite(['resources/js/app.js', 'resources/css/app.css'])
 <script>
     // Auto-dismiss flash setelah 4 detik
     setTimeout(() => {
