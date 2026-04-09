@@ -67,7 +67,7 @@ Sistem Manajemen Surat Digital untuk Kantor Metrologi dengan alur approval multi
 
 ### 1. Clone Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/Ye-Shaiyoe/Surat-Laravel.git
 cd Surat-Metrologi
 ```
 
