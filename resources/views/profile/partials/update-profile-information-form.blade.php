@@ -24,6 +24,12 @@
         </div>
 
         <div>
+            <x-input-label for="nip" :value="__('NIP (Nomor Induk Pegawai)')" />
+            <x-text-input id="nip" name="nip" type="text" class="mt-1 block w-full" :value="old('nip', $user->nip)" autocomplete="off" placeholder="Masukkan NIP Anda (jika ada)" />
+            <x-input-error class="mt-2" :messages="$errors->get('nip')" />
+        </div>
+
+        <div>
             <x-input-label for="email" :value="__('Email')" />
             <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />

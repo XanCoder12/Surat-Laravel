@@ -7,10 +7,18 @@
     <a href="{{ route('user.surat.index') }}" class="btn btn-sm btn-light" style="border-radius:8px;">
         <i class="bi bi-arrow-left"></i>
     </a>
-    <div>
+    <div class="flex-grow-1">
         <h5 class="fw-bold mb-0" style="color:#1e3a5f;">Detail & Tracking Surat</h5>
         <small class="text-muted">Pantau progress pengajuan surat kamu</small>
     </div>
+    {{-- Tombol Hapus --}}
+    <button type="button" 
+            class="btn btn-sm btn-danger" 
+            style="border-radius:8px;font-size:13px;"
+            data-bs-toggle="modal" 
+            data-bs-target="#deleteModal">
+        <i class="bi bi-trash"></i> Hapus Surat
+    </button>
 </div>
 
 <div class="row g-3">
@@ -264,6 +272,83 @@
         </div>
         @endif
 
+    </div>
+</div>
+
+{{-- Modal Hapus Surat --}}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{{ route('user.surat.requestDelete', $surat) }}" method="POST">
+                @csrf
+                @method('DELETE')
+                <div class="modal-header" style="background:#fee2e2;border-bottom:1px solid #fca5a5;">
+                    <h5 class="modal-title" id="deleteModalLabel" style="color:#b91c1c;">
+                        <i class="bi bi-trash"></i> Hapus Surat
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-size:14px;color:#374151;">
+                        Apakah Anda yakin ingin menghapus surat:
+                    </p>
+                    <div class="alert alert-light" style="border-left:4px solid #1e3a5f;font-size:13px;">
+                        <strong>{{ $surat->judul }}</strong><br>
+                        <span class="text-muted">{{ $surat->jenis_label }} · {{ $surat->created_at->format('d M Y') }}</span>
+                    </div>
+                    
+                    @php
+                        $bisaLangsungHapus = in_array($surat->status, ['ditolak', 'selesai']) || $surat->sla_status === 'terlambat';
+                        $existingRequest = \App\Models\SuratDeleteRequest::where('surat_id', $surat->id)->where('status', 'pending')->first();
+                    @endphp
+
+                    @if($bisaLangsungHapus)
+                        <div class="alert alert-warning" style="font-size:13px;">
+                            <i class="bi bi-exclamation-triangle"></i> 
+                            Surat ini akan <strong>langsung dihapus</strong> tanpa perlu persetujuan admin.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:13px;font-weight:600;">
+                                Alasan Penghapusan <span class="text-muted">(Opsional)</span>
+                            </label>
+                            <textarea name="alasan" class="form-control" rows="2" 
+                                      placeholder="Jelaskan alasan penghapusan surat..." 
+                                      style="font-size:13px;"></textarea>
+                        </div>
+                    @elseif($existingRequest)
+                        <div class="alert alert-info" style="font-size:13px;">
+                            <i class="bi bi-clock-history"></i> 
+                            Permintaan hapus sedang menunggu persetujuan admin.
+                        </div>
+                    @else
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:13px;font-weight:600;">
+                                Alasan Penghapusan <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="alasan" class="form-control" rows="3" 
+                                      placeholder="Jelaskan alasan penghapusan surat..." 
+                                      required 
+                                      style="font-size:13px;"></textarea>
+                            <small class="text-muted">Permintaan akan dikirim ke admin untuk disetujui.</small>
+                        </div>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="font-size:13px;">
+                        Batal
+                    </button>
+                    @if(!$bisaLangsungHapus && !$existingRequest)
+                        <button type="submit" class="btn btn-danger" style="font-size:13px;">
+                            <i class="bi bi-send"></i> Kirim Permintaan
+                        </button>
+                    @else
+                        <button type="submit" class="btn btn-danger" style="font-size:13px;">
+                            <i class="bi bi-trash"></i> Ya, Hapus Sekarang
+                        </button>
+                    @endif
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

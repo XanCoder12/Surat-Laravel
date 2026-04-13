@@ -4,12 +4,15 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Surat;
+use App\Models\SuratDeleteRequest;
 use App\Models\User;
 use Carbon\Carbon;
 use App\Notifications\SuratMasukNotification;
+use App\Notifications\DeleteRequestNotification;
+use App\Notifications\SuratDeletedNotification;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;    
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
     class SuratController extends Controller
@@ -49,7 +52,7 @@ use Illuminate\Support\Facades\Storage;
     {
         $request->validate([
             'judul'          => 'required|string|max:255',
-            'jenis'          => 'required|in:nota_dinas,surat_dinas,surat_keputusan,surat_pernyataan,surat_keterangan',
+            'jenis'          => 'required|in:nota_dinas,surat_dinas,surat_keputusan,surat_pernyataan,surat_keterangan,surat_undangan,surat_lainnya',
             'sifat'          => 'required|in:biasa,segera,rahasia',
             'tujuan'         => 'required|string|max:500',
             'file_word'      => 'required|file|mimes:docx,doc|max:10240',
@@ -62,7 +65,7 @@ use Illuminate\Support\Facades\Storage;
                   ? $request->file('file_lampiran')->store('surat/lampiran', 'public')
                   : null;
 
-        // Hitung deadline SLA = 1 hari kerja (skip Sabtu-Minggu)
+        // Hitung deadline SLA = 24 jam kerja (skip Sabtu-Minggu)
         $deadline = $this->hitungSLA(now());
 
         $surat = Surat::create([
@@ -101,17 +104,108 @@ use Illuminate\Support\Facades\Storage;
         return view('user.surat.show', compact('surat'));
     }
 
-    // Hitung 1 hari kerja (skip Sabtu & Minggu)
+    // Hitung 24 jam kerja (skip Sabtu & Minggu)
     private function hitungSLA(Carbon $dari): Carbon
     {
-        $deadline = $dari->copy()->addHours(8); // mulai dari jam kerja
-        $hari = 0;
-        while ($hari < 1) {
-            $deadline->addDay();
-            if (!$deadline->isWeekend()) {
-                $hari++;
+        $deadline = $dari->copy();
+        $jamDitambahkan = 0;
+
+        // Tambah 24 jam, skip weekend
+        while ($jamDitambahkan < 24) {
+            $deadline->addHour();
+
+            // Jika masuk weekend, skip ke Senin
+            while ($deadline->isWeekend()) {
+                $deadline->addDay()->startOfDay();
+            }
+
+            $jamDitambahkan++;
+        }
+
+        return $deadline;
+    }
+
+    /**
+     * Request delete surat (butuh approval admin jika sedang diproses)
+     */
+    public function requestDelete(Request $request, Surat $surat)
+    {
+        // Pastikan hanya pemilik yang bisa request
+        abort_if($surat->user_id !== Auth::id(), 403);
+
+        // Cek apakah sudah ada request delete yang pending
+        $existingRequest = SuratDeleteRequest::where('surat_id', $surat->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if ($existingRequest) {
+            return back()->with('error', 'Permintaan hapus sudah pernah dikirim dan masih menunggu approval admin.');
+        }
+
+        // Jika surat ditolak, selesai, atau SLA terlambat - bisa langsung hapus tanpa approval
+        $bisaLangsungHapus = in_array($surat->status, ['ditolak', 'selesai']) || $surat->sla_status === 'terlambat';
+
+        if ($bisaLangsungHapus) {
+            // Validasi ringan, alasan opsional
+            $request->validate([
+                'alasan' => 'nullable|string|max:500',
+            ]);
+
+            // Langsung hapus surat
+            $this->hapusSurat($surat);
+
+            // Notifikasi ke admin (sekadar info)
+            $alasan = $request->alasan ?? 'Penghapusan manual oleh user';
+            User::where('role', 'admin')->get()->each(function ($admin) use ($surat, $alasan) {
+                $admin->notify(new SuratDeletedNotification($surat, $alasan));
+            });
+
+            return redirect()->route('user.surat.index')
+                ->with('success', 'Surat berhasil dihapus.');
+        }
+
+        // Jika sedang diproses - buat request delete dengan status pending
+        $request->validate([
+            'alasan' => 'required|string|max:500',
+        ]);
+
+        $deleteRequest = SuratDeleteRequest::create([
+            'surat_id' => $surat->id,
+            'user_id'  => Auth::id(),
+            'alasan'   => $request->alasan,
+            'status'   => 'pending',
+        ]);
+
+        // Kirim notifikasi ke semua admin
+        User::where('role', 'admin')->get()->each(function ($admin) use ($deleteRequest) {
+            $admin->notify(new DeleteRequestNotification($deleteRequest));
+        });
+
+        return back()->with('info', 'Permintaan hapus telah dikirim. Menunggu persetujuan admin.');
+    }
+
+    /**
+     * Hapus surat (setelah disetujui admin atau bisa langsung hapus)
+     */
+    private function hapusSurat(Surat $surat)
+    {
+        // Hapus file word
+        if ($surat->file_word) {
+            $wordPath = storage_path('app/public/' . $surat->file_word);
+            if (file_exists($wordPath)) {
+                @unlink($wordPath);
             }
         }
-        return $deadline;
+
+        // Hapus file lampiran
+        if ($surat->file_lampiran) {
+            $lampiranPath = storage_path('app/public/' . $surat->file_lampiran);
+            if (file_exists($lampiranPath)) {
+                @unlink($lampiranPath);
+            }
+        }
+
+        // Hapus surat (tahapans akan terhapus otomatis karena cascade)
+        $surat->delete();
     }
 }

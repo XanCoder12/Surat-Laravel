@@ -34,8 +34,9 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name'          => ['required', 'string', 'max:255'],
             'email'         => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'nip'           => ['nullable', 'string', 'max:50', 'unique:'.User::class],
             'password'      => ['required', 'confirmed', Rules\Password::defaults()],
-            'admin_code'    => ['nullable', 'string'], // tambah field secret code
+            'admin_code'    => ['nullable', 'string'],
         ]);
 
         // Cek secret code
@@ -50,6 +51,7 @@ class RegisteredUserController extends Controller
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
+            'nip'      => $request->nip,
             'password' => Hash::make($request->password),
             'role'     => $role,
         ]);

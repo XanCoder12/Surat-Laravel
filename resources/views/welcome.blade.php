@@ -513,7 +513,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         
-        // Sedikit efek zoom halus ketika load (opsional)
         setTimeout(() => {
             camera.position.set(0, 1.2, 11);
         }, 100);

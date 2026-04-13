@@ -7,6 +7,9 @@
     <link rel="icon" href="{{ asset('images/BPSUML2.png') }}">
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
     <style>
         /* ===== LAYOUT ===== */
         body { display: flex; min-height: 100vh; background: #f3f4f6; font-family: 'Figtree', sans-serif; }
@@ -341,9 +344,10 @@
 
 {{-- ============ SIDEBAR ============ --}}
 <aside id="sidebar">
-    <div class="sidebar-logo">
-        <span>⚖️ Surat Metrologi</span>
-        <small>Balai Metrologi Legal</small>
+    <div class="sidebar-logo" style="text-align: center;">
+        <a href="{{ route('admin.dashboard') }}" style="text-decoration: none;">
+            <img src="{{ asset('images/White_SUML.png') }}" alt="Logo Balai Pengelola SUML" style="max-width: 100%; max-height: 60px; height: auto;">
+        </a>
     </div>
 
     <nav class="sidebar-menu">
@@ -364,6 +368,16 @@
         <a href="{{ route('admin.laporan.index') }}"
            class="menu-item {{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}">
             <span class="menu-icon">📋</span> Rekap Bulanan
+        </a>
+
+        <div class="menu-label">Komunikasi</div>
+        <a href="{{ route('admin.notifikasi.index') }}"
+           class="menu-item {{ request()->routeIs('admin.notifikasi.*') ? 'active' : '' }}">
+            <span class="menu-icon">🔔</span> Notifikasi
+            @php $notifCount = Auth::user()->unreadNotifications()->count(); @endphp
+            @if($notifCount > 0)
+                <span class="badge badge-red" style="margin-left:auto;font-size:10px;">{{ $notifCount }}</span>
+            @endif
         </a>
 
         <div class="menu-label">Pengaturan</div>
@@ -398,11 +412,15 @@
         </button>
         <div class="topbar-title">{{ $title ?? 'Dashboard' }}</div>
         <div class="topbar-right">
-            <span class="topbar-badge" data-unread-count style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16">
-                <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
-            </svg> <span class="notif-dot"></span>
-            </span>
+            <a href="{{ route('admin.notifikasi.index') }}" class="topbar-badge" style="text-decoration:none;" title="Notifikasi">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16" style="color:#6b7280;">
+                    <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/>
+                </svg>
+                @php $notifCount = Auth::user()->unreadNotifications()->count(); @endphp
+                @if($notifCount > 0)
+                <span class="notif-dot"></span>
+                @endif
+            </a>
             <div class="dropdown" id="user-menu-dropdown">
                 <button type="button"
                         class="topbar-avatar"

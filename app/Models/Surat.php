@@ -11,13 +11,16 @@ class Surat extends Model
         'user_id', 'judul', 'jenis', 'sifat', 'tujuan',
         'file_word', 'file_lampiran', 'nomor_surat', 'tanggal_surat',
         'tahap_sekarang', 'status', 'perlu_follow_up', 'catatan_follow_up',
-        'deadline_sla',
+        'deadline_sla', 'disetujui_pada', 'file_dihapus_pada', 'file_expires_at',
     ];
 
     protected $casts = [
         'tanggal_surat' => 'date',
         'deadline_sla'  => 'datetime',
         'perlu_follow_up' => 'boolean',
+        'disetujui_pada' => 'datetime',
+        'file_dihapus_pada' => 'datetime',
+        'file_expires_at' => 'datetime',
     ];
 
     // Label tampilan
@@ -27,6 +30,8 @@ class Surat extends Model
         'surat_keputusan'  => 'Surat Keputusan',
         'surat_pernyataan' => 'Surat Pernyataan',
         'surat_keterangan' => 'Surat Keterangan',
+        'surat_undangan'   => 'Surat Undangan',
+        'surat_lainnya'    => 'Surat/Note Lainnya',
     ];
 
     const NAMA_TAHAP = [
@@ -83,9 +88,21 @@ class Surat extends Model
     public function getSisaJamAttribute(): string
     {
         if (!$this->deadline_sla) return '-';
-        if (now()->gt($this->deadline_sla)) return 'Terlambat';
+        if (now()->gt($this->deadline_sla)) {
+            $diff = now()->diffInHours($this->deadline_sla);
+            return 'Terlambat ' . $diff . 'j';
+        }
         $diff = now()->diff($this->deadline_sla);
         return $diff->h . 'j ' . $diff->i . 'm';
+    }
+
+    public function getJamTerlambatAttribute(): int
+    {
+        if (!$this->deadline_sla || $this->status === 'selesai') return 0;
+        if (now()->gt($this->deadline_sla)) {
+            return (int) now()->diffInHours($this->deadline_sla);
+        }
+        return 0;
     }
 
     // Inisialisasi semua tahapan saat surat dibuat

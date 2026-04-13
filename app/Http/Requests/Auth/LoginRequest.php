@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,7 +42,20 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Cek apakah input adalah email atau NIP
+        $input = $this->input('email');
+        $isEmail = filter_var($input, FILTER_VALIDATE_EMAIL);
+        
+        // Coba login
+        if ($isEmail) {
+            // Login pakai email
+            $attempt = Auth::attempt(['email' => $input, 'password' => $this->input('password')], $this->boolean('remember'));
+        } else {
+            // Login pakai NIP
+            $attempt = Auth::attempt(['nip' => $input, 'password' => $this->input('password')], $this->boolean('remember'));
+        }
+
+        if (!$attempt) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([

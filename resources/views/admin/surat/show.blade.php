@@ -80,47 +80,60 @@
             {{-- FILE --}}
             <div style="margin-top:16px; padding-top:16px; border-top:1px solid #f3f4f6;">
                 <div style="font-size:12px; color:#6b7280; margin-bottom:10px; font-weight:600; letter-spacing:.5px;">LAMPIRAN</div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                
+                @if($surat->file_dihapus_pada)
+                    <div style="padding:12px; background:#fef3c7; border-radius:6px; border-left:4px solid #f59e0b; font-size:12px; color:#92400e;">
+                        ⚠️ File sudah kadaluarsa dan dihapus (3 hari setelah persetujuan). Riwayat surat masih tersedia.
+                    </div>
+                @else
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
 
-                    {{-- File Word --}}
-                    @if($surat->file_word)
-                        <div style="display:flex; gap:6px;">
-                            <button type="button"
-                                    onclick="openPreview('word', '{{ route('admin.surat.preview', [$surat, 'word']) }}', '{{ $surat->judul }}', 'word')"
-                                    class="btn btn-sm btn-primary"
-                                    style="display:inline-flex; align-items:center; gap:5px;">
-                                👁 Preview .docx
-                            </button>
-                            <a href="{{ route('admin.surat.download', [$surat, 'word']) }}"
-                               class="btn btn-sm"
-                               style="display:inline-flex; align-items:center; gap:5px;">
-                                ⬇ Download .docx
-                            </a>
+                        {{-- File Word --}}
+                        @if($surat->file_word)
+                            <div style="display:flex; gap:6px;">
+                                <button type="button"
+                                        onclick="openPreview('word', '{{ route('admin.surat.preview', [$surat, 'word']) }}', '{{ $surat->judul }}', 'word')"
+                                        class="btn btn-sm btn-primary"
+                                        style="display:inline-flex; align-items:center; gap:5px;">
+                                    👁 Preview .docx
+                                </button>
+                                <a href="{{ route('admin.surat.download', [$surat, 'word']) }}"
+                                   class="btn btn-sm"
+                                   style="display:inline-flex; align-items:center; gap:5px;">
+                                    ⬇ Download .docx
+                                </a>
+                            </div>
+                        @endif
+
+                        {{-- File Lampiran --}}
+                        @if($surat->file_lampiran)
+                            @php
+                                $lampiranExt = strtolower(pathinfo($surat->file_lampiran, PATHINFO_EXTENSION));
+                                $isPdf = $lampiranExt === 'pdf';
+                            @endphp
+                            <div style="display:flex; gap:6px;">
+                                <button type="button"
+                                        onclick="openPreview('lampiran', '{{ route('admin.surat.preview', [$surat, 'lampiran']) }}', '{{ $surat->judul }} – Lampiran', '{{ $lampiranExt }}')"
+                                        class="btn btn-sm btn-primary"
+                                        style="display:inline-flex; align-items:center; gap:5px;">
+                                    👁 Preview Lampiran
+                                </button>
+                                <a href="{{ route('admin.surat.download', [$surat, 'lampiran']) }}"
+                                   class="btn btn-sm"
+                                   style="display:inline-flex; align-items:center; gap:5px;">
+                                    ⬇ Download Lampiran
+                                </a>
+                            </div>
+                        @endif
+
+                    </div>
+                    
+                    @if($surat->file_expires_at && $surat->status === 'selesai')
+                        <div style="margin-top:10px; padding:8px 12px; background:#eff6ff; border-radius:6px; border-left:4px solid #3b82f6; font-size:11px; color:#1d4ed8;">
+                            ℹ️ File akan dihapus otomatis pada: <strong>{{ $surat->file_expires_at->format('d M Y, H:i') }}</strong> (3 hari setelah persetujuan)
                         </div>
                     @endif
-
-                    {{-- File Lampiran --}}
-                    @if($surat->file_lampiran)
-                        @php
-                            $lampiranExt = strtolower(pathinfo($surat->file_lampiran, PATHINFO_EXTENSION));
-                            $isPdf = $lampiranExt === 'pdf';
-                        @endphp
-                        <div style="display:flex; gap:6px;">
-                            <button type="button"
-                                    onclick="openPreview('lampiran', '{{ route('admin.surat.preview', [$surat, 'lampiran']) }}', '{{ $surat->judul }} – Lampiran', '{{ $lampiranExt }}')"
-                                    class="btn btn-sm btn-primary"
-                                    style="display:inline-flex; align-items:center; gap:5px;">
-                                👁 Preview Lampiran
-                            </button>
-                            <a href="{{ route('admin.surat.download', [$surat, 'lampiran']) }}"
-                               class="btn btn-sm"
-                               style="display:inline-flex; align-items:center; gap:5px;">
-                                ⬇ Download Lampiran
-                            </a>
-                        </div>
-                    @endif
-
-                </div>
+                @endif
             </div>
         </div>
 
@@ -400,6 +413,7 @@
 <script>
 const PREVIEW_SUPPORTED_PDF  = ['pdf'];
 const PREVIEW_SUPPORTED_WORD = ['doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp'];
+const PREVIEW_SUPPORTED_IMG  = ['jpg','jpeg','png'];
 
 let currentDownloadUrl = '';
 
@@ -408,6 +422,7 @@ function openPreview(tipe, previewUrl, title, ext) {
     const loader  = document.getElementById('previewLoader');
     const pdfFr   = document.getElementById('previewPdfFrame');
     const wordFr  = document.getElementById('previewWordFrame');
+    const imgContainer = document.getElementById('previewImageContainer');
     const noSupp  = document.getElementById('previewNoSupport');
     const dlBtn   = document.getElementById('previewDownloadBtn');
     const fallDl  = document.getElementById('previewFallbackDownload');
@@ -419,6 +434,7 @@ function openPreview(tipe, previewUrl, title, ext) {
     pdfFr.src            = 'about:blank';
     wordFr.style.display = 'none';
     wordFr.src           = 'about:blank';
+    if (imgContainer) imgContainer.style.display = 'none';
     noSupp.style.display = 'none';
     loader.style.display = 'flex';
 
@@ -442,20 +458,26 @@ function openPreview(tipe, previewUrl, title, ext) {
         pdfFr.style.display = 'block';
         pdfFr.src = previewUrl;
     } else if (PREVIEW_SUPPORTED_WORD.includes(extLower)) {
-        // Google Docs Viewer — perlu URL publik yang bisa diakses Google
-        // Coba gunakan URL storage langsung (jika server publik)
-        // atau route preview untuk Word
-        const encodedUrl = encodeURIComponent(previewUrl);
-        const gdocsUrl   = 'https://docs.google.com/gview?url=' + encodedUrl + '&embedded=true';
+        // Microsoft Office Online Viewer
         wordFr.style.display = 'block';
-        wordFr.src = gdocsUrl;
-
-        // Fallback: jika Google Docs tidak berhasil memuat dalam 15 detik, tampilkan pesan
-        window._previewTimeout = setTimeout(function() {
-            if (loader.style.display !== 'none') {
-                showNoSupport();
-            }
-        }, 15000);
+        wordFr.src = previewUrl;
+    } else if (PREVIEW_SUPPORTED_IMG.includes(extLower)) {
+        // Image viewer
+        if (!imgContainer) {
+            // Create image container if it doesn't exist
+            const container = document.createElement('div');
+            container.id = 'previewImageContainer';
+            container.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:auto;background:#1e293b;';
+            const img = document.createElement('img');
+            img.id = 'previewImage';
+            img.style.cssText = 'max-width:95%;max-height:95%;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.3);';
+            img.onload = () => { loader.style.display = 'none'; };
+            container.appendChild(img);
+            document.getElementById('previewBody').appendChild(container);
+        }
+        const img = document.getElementById('previewImage');
+        img.src = previewUrl;
+        imgContainer.style.display = 'flex';
     } else {
         showNoSupport();
     }
@@ -479,9 +501,11 @@ function closePreview() {
     const modal  = document.getElementById('previewModal');
     const pdfFr  = document.getElementById('previewPdfFrame');
     const wordFr = document.getElementById('previewWordFrame');
+    const imgContainer = document.getElementById('previewImageContainer');
     modal.style.display  = 'none';
     pdfFr.src            = 'about:blank';
     wordFr.src           = 'about:blank';
+    if (imgContainer) imgContainer.remove();
     document.body.style.overflow = '';
 }
 
@@ -496,5 +520,8 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closePreview();
 });
 </script>
+
+{{-- Include partial untuk delete requests --}}
+@include('admin.surat._delete-requests')
 
 @endsection

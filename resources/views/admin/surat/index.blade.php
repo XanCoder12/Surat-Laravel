@@ -129,7 +129,7 @@
                             @if($surat->status === 'selesai')
                                 <span class="badge badge-green">✓ OK</span>
                             @elseif($surat->sla_status === 'terlambat')
-                                <span class="badge badge-red">⚠ Terlambat</span>
+                                <span class="badge badge-red">⚠ {{ $surat->sisa_jam }}</span>
                             @else
                                 <span class="badge badge-blue">⏱ {{ $surat->sisa_jam }}</span>
                             @endif

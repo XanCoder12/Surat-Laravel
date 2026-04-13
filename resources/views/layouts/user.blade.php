@@ -295,9 +295,8 @@
 {{-- ===== NAVBAR ===== --}}
 <nav class="navbar navbar-main d-flex align-items-center justify-content-between">
     {{-- Brand --}}
-    <a class="navbar-brand-text text-decoration-none" href="{{ route('dashboard') }}">
-        ⚖️ Surat Balai Pengelola SUML
-        <small>Balai Penglo SUML Legal</small>
+    <a class="navbar-brand-text text-decoration-none d-flex align-items-center" href="{{ route('dashboard') }}">
+        <img src="{{ asset('images/White_SUML.png') }}" alt="Logo BPR SUML" style="height: 45px; object-fit: contain;">
     </a>
 
     {{-- Nav Links --}}
@@ -440,6 +439,12 @@
 <form id="readall-form" action="{{ route('notif.readAll') }}" method="POST" class="d-none">@csrf</form>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+<style>
+    [x-cloak] { display: none !important; }
+    .rotate-180 { transform: rotate(180deg); }
+</style>
 
 @vite(['resources/js/app.js', 'resources/css/app.css'])
 <script>

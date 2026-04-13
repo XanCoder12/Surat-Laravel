@@ -23,11 +23,17 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'nip',
     ];
 
         public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function surats()
+    {
+        return $this->hasMany(\App\Models\Surat::class);
     }
 
     /**
