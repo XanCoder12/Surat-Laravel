@@ -38,38 +38,45 @@ Route::prefix('surat')->name('user.surat.')->group(function () {
 // ===== ADMIN =====
 Route::prefix('Admin')->middleware(['auth', 'verified', 'admin'])->name('admin.')->group(function () {
 
-    Route::get('/Dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Role Selection (tanpa middleware admin.role.check, karena ini tempat pilih role)
+    Route::get('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'show'])->name('role.select');
+    Route::post('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'store'])->name('role.store');
 
-    Route::get('/Surat', [SuratController::class, 'index'])->name('surat.index');
-    Route::get('/Surat/{surat}', [SuratController::class, 'show'])->name('surat.show');
-    Route::get('/Surat/{surat}/preview/{tipe}', [SuratController::class, 'preview'])->name('surat.preview');
-    Route::get('/Surat/{surat}/download/{tipe}', [SuratController::class, 'download'])->name('surat.download');
-    Route::post('/Surat/{surat}/setujui', [SuratController::class, 'setujui'])->name('surat.setujui');
-    Route::post('/Surat/{surat}/tolak', [SuratController::class, 'tolak'])->name('surat.tolak');
-    Route::post('/Surat/delete-request/{deleteRequest}/approve', [SuratController::class, 'approveDelete'])->name('surat.approveDelete');
-    Route::post('/Surat/delete-request/{deleteRequest}/reject', [SuratController::class, 'rejectDelete'])->name('surat.rejectDelete');
+    // Dashboard & other routes (dengan middleware admin.role.check)
+    Route::middleware(['admin.role.check'])->group(function () {
+        Route::get('/Dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/Laporan', [LaporanController::class, 'index'])->name('laporan.index');
-    Route::get('/Laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
+        Route::get('/Surat', [SuratController::class, 'index'])->name('surat.index');
+        Route::get('/Surat/{surat}', [SuratController::class, 'show'])->name('surat.show');
+        Route::get('/Surat/{surat}/preview/{tipe}', [SuratController::class, 'preview'])->name('surat.preview');
+        Route::get('/Surat/{surat}/download/{tipe}', [SuratController::class, 'download'])->name('surat.download');
+        Route::post('/Surat/{surat}/setujui', [SuratController::class, 'setujui'])->name('surat.setujui');
+        Route::post('/Surat/{surat}/tolak', [SuratController::class, 'tolak'])->name('surat.tolak');
+        Route::post('/Surat/delete-request/{deleteRequest}/approve', [SuratController::class, 'approveDelete'])->name('surat.approveDelete');
+        Route::post('/Surat/delete-request/{deleteRequest}/reject', [SuratController::class, 'rejectDelete'])->name('surat.rejectDelete');
 
-    Route::get('/Chart', [\App\Http\Controllers\Admin\ChartController::class, 'index'])->name('chart.index');
-    Route::get('/Chart/data', [\App\Http\Controllers\Admin\ChartController::class, 'data'])->name('chart.data');
+        Route::get('/Laporan', [LaporanController::class, 'index'])->name('laporan.index');
+        Route::get('/Laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
 
-    Route::get('/Template', [TemplateSuratController::class, 'index'])->name('template.index');
-    Route::post('/Template', [TemplateSuratController::class, 'store'])->name('template.store');
-    Route::delete('/Template', [TemplateSuratController::class, 'destroy'])->name('template.destroy');
+        Route::get('/Chart', [\App\Http\Controllers\Admin\ChartController::class, 'index'])->name('chart.index');
+        Route::get('/Chart/data', [\App\Http\Controllers\Admin\ChartController::class, 'data'])->name('chart.data');
 
-    // Users / Pegawai
-    Route::get('/Users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
-    Route::get('/Users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])->name('users.show');
-    Route::delete('/Users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/Template', [TemplateSuratController::class, 'index'])->name('template.index');
+        Route::post('/Template', [TemplateSuratController::class, 'store'])->name('template.store');
+        Route::delete('/Template', [TemplateSuratController::class, 'destroy'])->name('template.destroy');
 
-    // Notifikasi Admin
-    Route::get('/Notifikasi', [\App\Http\Controllers\Admin\NotifikasiController::class, 'index'])->name('notifikasi.index');
-    Route::post('/Notifikasi/read/{id}', [\App\Http\Controllers\Admin\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
-    Route::post('/Notifikasi/read-all', [\App\Http\Controllers\Admin\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.readAll');
-    Route::delete('/Notifikasi/{id}', [\App\Http\Controllers\Admin\NotifikasiController::class, 'destroy'])->name('notifikasi.delete');
-    Route::delete('/Notifikasi', [\App\Http\Controllers\Admin\NotifikasiController::class, 'destroyAll'])->name('notifikasi.deleteAll');
+        // Users / Pegawai
+        Route::get('/Users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
+        Route::get('/Users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])->name('users.show');
+        Route::delete('/Users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
+
+        // Notifikasi Admin
+        Route::get('/Notifikasi', [\App\Http\Controllers\Admin\NotifikasiController::class, 'index'])->name('notifikasi.index');
+        Route::post('/Notifikasi/read/{id}', [\App\Http\Controllers\Admin\NotifikasiController::class, 'markAsRead'])->name('notifikasi.read');
+        Route::post('/Notifikasi/read-all', [\App\Http\Controllers\Admin\NotifikasiController::class, 'markAllAsRead'])->name('notifikasi.readAll');
+        Route::delete('/Notifikasi/{id}', [\App\Http\Controllers\Admin\NotifikasiController::class, 'destroy'])->name('notifikasi.delete');
+        Route::delete('/Notifikasi', [\App\Http\Controllers\Admin\NotifikasiController::class, 'destroyAll'])->name('notifikasi.deleteAll');
+    });
 });
 
 Route::middleware(['auth', 'verified'])->prefix('notif')->name('notif.')->group(function () {
