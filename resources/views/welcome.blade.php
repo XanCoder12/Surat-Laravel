@@ -495,7 +495,6 @@
             colorLight1.color.setHSL(0.55 + Math.sin(time * 0.7) * 0.1, 1, 0.6);
             colorLight2.color.setHSL(0.45 + Math.cos(time * 0.5) * 0.1, 1, 0.6);
             
-            
             const lerpSpeed = 0.05;
             camera.position.x += (targetRotationY * 0.8 - camera.position.x) * lerpSpeed;
             camera.position.y += (-targetRotationX * 0.5 - camera.position.y) * lerpSpeed;
