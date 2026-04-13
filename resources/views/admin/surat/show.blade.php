@@ -223,7 +223,11 @@
     {{-- KOLOM KANAN: AKSI --}}
     <div style="display:flex; flex-direction:column; gap:12px;">
 
-        @if($surat->status === 'proses')
+        @php
+            $canApprove = Auth::user()->canApproveTahap($surat->tahap_sekarang);
+        @endphp
+
+        @if($surat->status === 'proses' && $canApprove)
 
             {{-- SETUJUI --}}
             <div class="card">
@@ -295,6 +299,15 @@
                         ✗ Tolak Surat
                     </button>
                 </form>
+            </div>
+
+        @elseif($surat->status === 'proses' && !$canApprove)
+            <div class="card" style="text-align:center; padding:24px; background:#fef3c7; border:1px solid #f59e0b;">
+                <div style="font-size:32px; margin-bottom:8px;">⚠️</div>
+                <div style="font-size:14px; font-weight:600; color:#92400e;">Anda Tidak Berwenang</div>
+                <div style="font-size:12px; color:#a16207; margin-top:4px;">
+                    Role Anda ({{ Auth::user()->getRoleLabel() }}) tidak sesuai untuk tahap ini.
+                </div>
             </div>
 
         @elseif($surat->status === 'selesai')
@@ -383,21 +396,30 @@
             {{-- Iframe untuk PDF --}}
             <iframe id="previewPdfFrame"
                     src="about:blank"
-                    style="display:none; width:100%; height:100%; border:none;"
-                    onload="onFrameLoad()"></iframe>
+                    style="display:none; width:100%; height:100%; border:none;"></iframe>
 
-            {{-- Iframe Google Docs untuk Word/Office --}}
-            <iframe id="previewWordFrame"
-                    src="about:blank"
-                    style="display:none; width:100%; height:100%; border:none;"
-                    onload="onFrameLoad()"></iframe>
+            {{-- Container untuk Word HTML --}}
+            <div id="previewWordHtml"
+                 style="display:none; width:100%; height:100%; overflow:auto; padding:24px;
+                        background:#fff; font-family:'Times New Roman',serif; font-size:14pt;
+                        line-height:1.6; color:#000;">
+            </div>
+
+            {{-- Container untuk Image --}}
+            <div id="previewImageContainer"
+                 style="display:none; width:100%; height:100%; overflow:auto;
+                        align-items:center; justify-content:center; background:#1e293b;">
+                <img id="previewImage"
+                     style="max-width:95%; max-height:95%; object-fit:contain;
+                            border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,.3);">
+            </div>
 
             {{-- Pesan tidak bisa preview --}}
             <div id="previewNoSupport"
                  style="display:none; position:absolute; inset:0; align-items:center;
                         justify-content:center; flex-direction:column; gap:16px; font-size:14px; color:#64748b;">
                 <div style="font-size:48px;">📁</div>
-                <div>Format file tidak dapat di-preview langsung.</div>
+                <div id="previewNoSupportMsg">Format file tidak dapat di-preview langsung.</div>
                 <a id="previewFallbackDownload" href="#"
                    class="btn btn-primary">⬇ Download File</a>
             </div>
@@ -411,32 +433,31 @@
 </style>
 
 <script>
-const PREVIEW_SUPPORTED_PDF  = ['pdf'];
-const PREVIEW_SUPPORTED_WORD = ['doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp'];
-const PREVIEW_SUPPORTED_IMG  = ['jpg','jpeg','png'];
-
 let currentDownloadUrl = '';
 
 function openPreview(tipe, previewUrl, title, ext) {
-    const modal   = document.getElementById('previewModal');
-    const loader  = document.getElementById('previewLoader');
-    const pdfFr   = document.getElementById('previewPdfFrame');
-    const wordFr  = document.getElementById('previewWordFrame');
-    const imgContainer = document.getElementById('previewImageContainer');
-    const noSupp  = document.getElementById('previewNoSupport');
-    const dlBtn   = document.getElementById('previewDownloadBtn');
-    const fallDl  = document.getElementById('previewFallbackDownload');
-    const ttl     = document.getElementById('previewTitle');
-    const sub     = document.getElementById('previewSubtitle');
+    const modal       = document.getElementById('previewModal');
+    const loader      = document.getElementById('previewLoader');
+    const pdfFr       = document.getElementById('previewPdfFrame');
+    const wordHtml    = document.getElementById('previewWordHtml');
+    const imgCont     = document.getElementById('previewImageContainer');
+    const img         = document.getElementById('previewImage');
+    const noSupp      = document.getElementById('previewNoSupport');
+    const dlBtn       = document.getElementById('previewDownloadBtn');
+    const fallDl      = document.getElementById('previewFallbackDownload');
+    const ttl         = document.getElementById('previewTitle');
+    const sub         = document.getElementById('previewSubtitle');
+    const noSuppMsg   = document.getElementById('previewNoSupportMsg');
 
-    // Reset
-    pdfFr.style.display  = 'none';
-    pdfFr.src            = 'about:blank';
-    wordFr.style.display = 'none';
-    wordFr.src           = 'about:blank';
-    if (imgContainer) imgContainer.style.display = 'none';
-    noSupp.style.display = 'none';
-    loader.style.display = 'flex';
+    // Reset semua
+    pdfFr.style.display   = 'none';
+    pdfFr.src             = 'about:blank';
+    wordHtml.style.display = 'none';
+    wordHtml.innerHTML    = '';
+    imgCont.style.display = 'none';
+    img.src               = '';
+    noSupp.style.display  = 'none';
+    loader.style.display  = 'flex';
 
     // Download URL
     const downloadUrl = previewUrl.replace('/preview/', '/download/');
@@ -451,61 +472,53 @@ function openPreview(tipe, previewUrl, title, ext) {
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
 
-    const extLower = ext.toLowerCase();
+    // Get content URL dari previewUrl (ambil bagian /preview-content/)
+    const contentUrl = previewUrl.replace('/preview/', '/preview-content/');
 
-    if (PREVIEW_SUPPORTED_PDF.includes(extLower)) {
-        // Native PDF viewer
-        pdfFr.style.display = 'block';
-        pdfFr.src = previewUrl;
-    } else if (PREVIEW_SUPPORTED_WORD.includes(extLower)) {
-        // Microsoft Office Online Viewer
-        wordFr.style.display = 'block';
-        wordFr.src = previewUrl;
-    } else if (PREVIEW_SUPPORTED_IMG.includes(extLower)) {
-        // Image viewer
-        if (!imgContainer) {
-            // Create image container if it doesn't exist
-            const container = document.createElement('div');
-            container.id = 'previewImageContainer';
-            container.style.cssText = 'display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:auto;background:#1e293b;';
-            const img = document.createElement('img');
-            img.id = 'previewImage';
-            img.style.cssText = 'max-width:95%;max-height:95%;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.3);';
-            img.onload = () => { loader.style.display = 'none'; };
-            container.appendChild(img);
-            document.getElementById('previewBody').appendChild(container);
-        }
-        const img = document.getElementById('previewImage');
-        img.src = previewUrl;
-        imgContainer.style.display = 'flex';
-    } else {
-        showNoSupport();
-    }
-}
+    // Fetch content via API
+    fetch(contentUrl)
+        .then(res => res.json())
+        .then(data => {
+            loader.style.display = 'none';
 
-function onFrameLoad() {
-    clearTimeout(window._previewTimeout);
-    document.getElementById('previewLoader').style.display = 'none';
-}
-
-function showNoSupport() {
-    document.getElementById('previewLoader').style.display    = 'none';
-    document.getElementById('previewPdfFrame').style.display  = 'none';
-    document.getElementById('previewWordFrame').style.display = 'none';
-    const ns = document.getElementById('previewNoSupport');
-    ns.style.display = 'flex';
+            if (data.type === 'html') {
+                // Word: tampilkan HTML
+                wordHtml.innerHTML = data.content;
+                wordHtml.style.display = 'block';
+            } else if (data.type === 'pdf') {
+                // PDF: tampilkan di iframe
+                pdfFr.src = data.url;
+                pdfFr.style.display = 'block';
+            } else if (data.type === 'image') {
+                // Image: tampilkan gambar
+                img.src = data.url;
+                imgCont.style.display = 'flex';
+            } else {
+                // Error / tidak support
+                noSuppMsg.textContent = data.error || 'Format file tidak dapat di-preview langsung.';
+                noSupp.style.display = 'flex';
+            }
+        })
+        .catch(err => {
+            console.error('Preview error:', err);
+            loader.style.display = 'none';
+            noSuppMsg.textContent = 'Gagal memuat preview. Silakan download file.';
+            noSupp.style.display = 'flex';
+        });
 }
 
 function closePreview() {
-    clearTimeout(window._previewTimeout);
-    const modal  = document.getElementById('previewModal');
-    const pdfFr  = document.getElementById('previewPdfFrame');
-    const wordFr = document.getElementById('previewWordFrame');
-    const imgContainer = document.getElementById('previewImageContainer');
-    modal.style.display  = 'none';
-    pdfFr.src            = 'about:blank';
-    wordFr.src           = 'about:blank';
-    if (imgContainer) imgContainer.remove();
+    const modal       = document.getElementById('previewModal');
+    const pdfFr       = document.getElementById('previewPdfFrame');
+    const wordHtml    = document.getElementById('previewWordHtml');
+    const imgCont     = document.getElementById('previewImageContainer');
+
+    modal.style.display   = 'none';
+    pdfFr.src             = 'about:blank';
+    pdfFr.style.display   = 'none';
+    wordHtml.innerHTML    = '';
+    wordHtml.style.display = 'none';
+    imgCont.style.display = 'none';
     document.body.style.overflow = '';
 }
 

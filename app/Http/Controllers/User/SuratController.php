@@ -83,10 +83,16 @@ use Illuminate\Support\Facades\Storage;
 
         // Inisialisasi semua tahapan
         $surat->initTahapan();
-        User::where('role', 'admin')->get()->each(fn($a) => $a->notify(new SuratMasukNotification($surat)));
 
         // Set tahap 2 jadi 'proses' (siap diverifikasi arsiparis)
         $surat->tahapans()->where('tahap', 2)->update(['status' => 'proses']);
+
+        // Update tahap_sekarang ke 2 karena tahap 1 sudah selesai otomatis
+        $surat->update(['tahap_sekarang' => 2]);
+
+        // Notif ke SEMUA admin (semua role)
+        User::whereIn('role', ['admin', 'admin_aspirasi', 'admin_kasubbag_tu', 'admin_kepala_balai'])
+            ->each(fn($a) => $a->notify(new SuratMasukNotification($surat)));
 
         return redirect()->route('user.surat.show', $surat)
                          ->with('success', 'Surat berhasil diajukan! Silakan pantau statusnya di bawah.');
@@ -154,11 +160,12 @@ use Illuminate\Support\Facades\Storage;
             // Langsung hapus surat
             $this->hapusSurat($surat);
 
-            // Notifikasi ke admin (sekadar info)
+            // Notifikasi ke semua admin (sekadar info)
             $alasan = $request->alasan ?? 'Penghapusan manual oleh user';
-            User::where('role', 'admin')->get()->each(function ($admin) use ($surat, $alasan) {
-                $admin->notify(new SuratDeletedNotification($surat, $alasan));
-            });
+            User::whereIn('role', ['admin', 'admin_aspirasi', 'admin_kasubbag_tu', 'admin_kepala_balai'])
+                ->each(function ($admin) use ($surat, $alasan) {
+                    $admin->notify(new SuratDeletedNotification($surat, $alasan));
+                });
 
             return redirect()->route('user.surat.index')
                 ->with('success', 'Surat berhasil dihapus.');
@@ -177,9 +184,10 @@ use Illuminate\Support\Facades\Storage;
         ]);
 
         // Kirim notifikasi ke semua admin
-        User::where('role', 'admin')->get()->each(function ($admin) use ($deleteRequest) {
-            $admin->notify(new DeleteRequestNotification($deleteRequest));
-        });
+        User::whereIn('role', ['admin', 'admin_aspirasi', 'admin_kasubbag_tu', 'admin_kepala_balai'])
+            ->each(function ($admin) use ($deleteRequest) {
+                $admin->notify(new DeleteRequestNotification($deleteRequest));
+            });
 
         return back()->with('info', 'Permintaan hapus telah dikirim. Menunggu persetujuan admin.');
     }

@@ -19,6 +19,24 @@ class SuratController extends Controller
     {
         $query = Surat::with('user')->latest();
 
+        $admin = Auth::user();
+
+        // Filter berdasarkan role admin
+        // admin_aspirasi: tahap 2 + 5-10
+        // admin_kasubbag_tu: tahap 3
+        // admin_kepala_balai: tahap 4
+        if ($admin->role === 'admin_aspirasi') {
+            $query->where(function($q) {
+                $q->where('tahap_sekarang', 2)
+                  ->orWhere('tahap_sekarang', '>=', 5);
+            });
+        } elseif ($admin->role === 'admin_kasubbag_tu') {
+            $query->where('tahap_sekarang', 3);
+        } elseif ($admin->role === 'admin_kepala_balai') {
+            $query->where('tahap_sekarang', 4);
+        }
+        // admin lama (role='admin') tetap bisa lihat semua
+
         if ($request->filled('jenis'))  $query->where('jenis', $request->jenis);
         if ($request->filled('status')) $query->where('status', $request->status);
         if ($request->filled('tahap'))  $query->where('tahap_sekarang', $request->tahap);
@@ -41,6 +59,12 @@ class SuratController extends Controller
             'catatan'     => 'nullable|string|max:500',
             'nomor_surat' => 'nullable|string|max:100',
         ]);
+
+        // Validasi: apakah admin punya hak approve tahap ini?
+        $admin = Auth::user();
+        if (!$admin->canApproveTahap($surat->tahap_sekarang)) {
+            return back()->with('error', 'Anda tidak memiliki wewenang untuk approve tahap ini.');
+        }
 
         // Tandai tahap sekarang selesai
         SuratTahapan::where('surat_id', $surat->id)
@@ -139,7 +163,7 @@ class SuratController extends Controller
     // Kirim notif ke semua admin kecuali yang sedang login
     private function notifAdminLain(Surat $surat, $currentUser, string $aksi): void
     {
-        User::where('role', 'admin')
+        User::whereIn('role', ['admin', 'admin_aspirasi', 'admin_kasubbag_tu', 'admin_kepala_balai'])
             ->where('id', '!=', $currentUser->id)
             ->get()
             ->each(function ($admin) use ($surat, $currentUser, $aksi) {
@@ -167,40 +191,45 @@ class SuratController extends Controller
         $fullPath = storage_path('app/public/' . $filePath);
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        // Tentukan MIME type
-        $mimeTypes = [
-            'pdf'  => 'application/pdf',
-            'doc'  => 'application/msword',
-            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'jpg'  => 'image/jpeg',
-            'jpeg' => 'image/jpeg',
-            'png'  => 'image/png',
-        ];
-
-        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+        // Untuk PDF, tampilkan inline di browser
+        if ($extension === 'pdf') {
+            return response()->file($fullPath, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+            ]);
+        }
 
         // Untuk gambar, langsung tampilkan
-        if (in_array($extension, ['jpg', 'jpeg', 'png'])) {
-            return response()->file($fullPath, ['Content-Type' => $mimeType]);
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'])) {
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'bmp' => 'image/bmp',
+            ];
+            return response()->file($fullPath, [
+                'Content-Type' => $mimeTypes[$extension] ?? 'image/jpeg',
+                'Content-Disposition' => 'inline; filename="' . basename($filePath) . '"',
+            ]);
         }
 
-        // Untuk PDF, tampilkan di browser
-        if ($extension === 'pdf') {
-            return response()->file($fullPath, ['Content-Type' => $mimeType]);
+        // Untuk Word (.docx/.doc), convert ke HTML dan tampilkan di modal
+        if (in_array($extension, ['docx', 'doc'])) {
+            $converter = new \App\Services\DocxToHtmlConverter($fullPath);
+            $htmlContent = $converter->convert();
+
+            return response()->view('admin.surat.preview-word', [
+                'surat' => $surat,
+                'htmlContent' => $htmlContent,
+                'tipe' => $tipe,
+                'fileName' => basename($filePath),
+            ]);
         }
 
-        // Untuk Word (.docx), gunakan viewer online atau download
-        // Opsi 1: Return sebagai download dengan header inline
-        // Opsi 2: Gunakan Microsoft Office Online Viewer (perlu URL publik)
-        
-        // Coba gunakan ONLYOFFICE atau Microsoft Office Online Viewer
-        $fileUrl = asset('storage/' . $filePath);
-        
-        // Microsoft Office Online Viewer
-        $viewerUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' . urlencode($fileUrl);
-        
-        // Return HTML yang embed viewer
-        return response()->view('admin.surat.preview-word', compact('surat', 'viewerUrl', 'tipe'));
+        // Fallback: download
+        return response()->download($fullPath);
     }
 
     public function download(Surat $surat, string $tipe)
@@ -216,7 +245,84 @@ class SuratController extends Controller
             abort(404, 'File tidak ditemukan');
         }
 
-        return \Storage::disk('public')->download($filePath);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        // Ambil nama file asli
+        $originalName = $tipe === 'word' ? $surat->judul : 'lampiran';
+        $downloadName = preg_replace('/[^a-zA-Z0-9_-]/', '_', $originalName) . '.' . $extension;
+
+        // MIME types
+        $mimeTypes = [
+            'pdf'  => 'application/pdf',
+            'doc'  => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp'  => 'image/bmp',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls'  => 'application/vnd.ms-excel',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+        ];
+
+        $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
+
+        // Hapus semua output buffer
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Gunakan Storage::download() yang sudah handle binary file dengan benar
+        return \Storage::disk('public')->download($filePath, $downloadName, [
+            'Content-Type' => $mimeType,
+        ]);
+    }
+    public function previewContent(Surat $surat, string $tipe)
+    {
+        if ($surat->file_dihapus_pada) {
+            return response()->json(['error' => 'File sudah kadaluarsa'], 404);
+        }
+
+        $filePath = $tipe === 'word' ? $surat->file_word : $surat->file_lampiran;
+
+        if (!$filePath || !\Storage::disk('public')->exists($filePath)) {
+            return response()->json(['error' => 'File tidak ditemukan'], 404);
+        }
+
+        $fullPath = storage_path('app/public/' . $filePath);
+        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        // Word: convert ke HTML
+        if (in_array($extension, ['docx', 'doc'])) {
+            $converter = new \App\Services\DocxToHtmlConverter($fullPath);
+            $htmlContent = $converter->convert();
+
+            return response()->json([
+                'type' => 'html',
+                'content' => $htmlContent,
+            ]);
+        }
+
+        // PDF: return URL untuk iframe
+        if ($extension === 'pdf') {
+            return response()->json([
+                'type' => 'pdf',
+                'url' => route('admin.surat.preview', [$surat, $tipe]),
+            ]);
+        }
+
+        // Image: return URL
+        if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'])) {
+            return response()->json([
+                'type' => 'image',
+                'url' => route('admin.surat.preview', [$surat, $tipe]),
+            ]);
+        }
+
+        return response()->json(['error' => 'Format tidak didukung'], 400);
     }
 
     /**

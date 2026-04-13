@@ -24,11 +24,51 @@ class User extends Authenticatable
         'password',
         'role',
         'nip',
+        'role_selected',
     ];
 
-        public function isAdmin(): bool
+    /**
+     * Cek apakah user adalah admin (selain 'user')
+     */
+    public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return in_array($this->role, ['admin', 'admin_aspirasi', 'admin_kasubbag_tu', 'admin_kepala_balai']);
+    }
+
+    /**
+     * Cek apakah user sudah memilih role admin
+     */
+    public function hasSelectedRole(): bool
+    {
+        return (bool) $this->role_selected;
+    }
+
+    /**
+     * Label role untuk ditampilkan
+     */
+    public function getRoleLabel(): string
+    {
+        return match ($this->role) {
+            'admin_aspirasi' => 'Arsiparis',
+            'admin_kasubbag_tu' => 'Kasubbag TU',
+            'admin_kepala_balai' => 'Kepala Balai',
+            'admin' => 'Admin (belum update role)',
+            default => 'User',
+        };
+    }
+
+    /**
+     * Cek apakah user bisa approve tahap tertentu
+     */
+    public function canApproveTahap(int $tahap): bool
+    {
+        return match ($this->role) {
+            'admin_aspirasi' => $tahap === 2 || $tahap >= 5,
+            'admin_kasubbag_tu' => $tahap === 3,
+            'admin_kepala_balai' => $tahap === 4,
+            'admin' => true, // admin lama masih bisa semua
+            default => false,
+        };
     }
 
     public function surats()

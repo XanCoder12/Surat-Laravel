@@ -354,11 +354,11 @@
         <div class="menu-label">Utama</div>
         <a href="{{ route('admin.dashboard') }}"
            class="menu-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-            <span class="menu-icon">📊</span> Dashboard
+            <span class="menu-icon"><i class="bi bi-speedometer2"></i></span> Dashboard
         </a>
         <a href="{{ route('admin.surat.index') }}"
            class="menu-item {{ request()->routeIs('admin.surat.*') ? 'active' : '' }}">
-            <span class="menu-icon">📬</span> Antrian Surat
+            <span class="menu-icon"><i class="bi bi-envelope"></i></span> Antrian Surat
             @if($antrianCount ?? 0)
                 <span class="badge badge-red" style="margin-left:auto;font-size:10px;">{{ $antrianCount }}</span>
             @endif
@@ -367,13 +367,13 @@
         <div class="menu-label">Laporan</div>
         <a href="{{ route('admin.laporan.index') }}"
            class="menu-item {{ request()->routeIs('admin.laporan.*') ? 'active' : '' }}">
-            <span class="menu-icon">📋</span> Rekap Bulanan
+            <span class="menu-icon"><i class="bi bi-file-earmark-text"></i></span> Rekap Bulanan
         </a>
 
         <div class="menu-label">Komunikasi</div>
         <a href="{{ route('admin.notifikasi.index') }}"
            class="menu-item {{ request()->routeIs('admin.notifikasi.*') ? 'active' : '' }}">
-            <span class="menu-icon">🔔</span> Notifikasi
+            <span class="menu-icon"><i class="bi bi-bell"></i></span> Notifikasi
             @php $notifCount = Auth::user()->unreadNotifications()->count(); @endphp
             @if($notifCount > 0)
                 <span class="badge badge-red" style="margin-left:auto;font-size:10px;">{{ $notifCount }}</span>
@@ -383,29 +383,27 @@
         <div class="menu-label">Pengaturan</div>
         <a href="{{ route('admin.template.index') }}"
            class="menu-item {{ request()->routeIs('admin.template.*') ? 'active' : '' }}">
-            <span class="menu-icon">📄</span> Template Surat
+            <span class="menu-icon"><i class="bi bi-file-earmark-text"></i></span> Template Surat
         </a>
         <a href="{{ route('admin.users.index') }}"
            class="menu-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-            <span class="menu-icon">👥</span> Data Pegawai
+            <span class="menu-icon"><i class="bi bi-people"></i></span> Data Pegawai
         </a>
         <div class="menu-label">Chart</div>
         <a href="{{ route('admin.chart.index') }}"
            class="menu-item {{ request()->routeIs('admin.chart.*') ? 'active' : '' }}">
-           <span class="menu-icon">📊</span> Statistik & Grafik
+           <span class="menu-icon"><i class="bi bi-bar-chart"></i></span> Statistik & Grafik
         </a>
     </nav>
 
     <div class="sidebar-user">
         <strong>{{ Auth::user()->name }}</strong>
-        Administrator
+        {{ Auth::user()->getRoleLabel() }}
     </div>
 </aside>
 
-{{-- ============ MAIN ============ --}}
 <div id="main">
 
-    {{-- TOPBAR --}}
     <header id="topbar">
         <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
             ☰

@@ -61,8 +61,14 @@ class RegisteredUserController extends Controller
         Auth::login($user);
 
         // Redirect berdasarkan role
-        return $user->isAdmin()
-            ? redirect()->intended(route('admin.dashboard'))
-            : redirect()->intended(route('dashboard'));
+        if ($user->isAdmin()) {
+            // Jika admin tapi belum pilih role → redirect ke halaman pilih role
+            if (!$user->hasSelectedRole()) {
+                return redirect()->intended(route('admin.role.select'));
+            }
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        return redirect()->intended(route('dashboard'));
     }
 }

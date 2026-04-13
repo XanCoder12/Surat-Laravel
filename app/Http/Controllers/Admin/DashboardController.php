@@ -36,15 +36,31 @@ class DashboardController extends Controller
         // Sesuaikan kondisi tahap dengan role masing-masing:
         // Arsiparis    → tahap 2
         // Kasubbag TU  → tahap 3
-        // Kabalai      → tahap 4
+        // Kepala Balai → tahap 4
         // Persuratan   → tahap 5,6,7,8,9,10
-        // Admin lihat semua
-        $antrian = Surat::where('status', 'proses')
-                        ->with('user')
-                        ->orderByRaw("CASE WHEN deadline_sla < NOW() THEN 0 ELSE 1 END")
-                        ->orderBy('created_at')
-                        ->limit(10)
-                        ->get();
+        // Admin lama   → semua
+        $admin = Auth::user();
+
+        $antrianQuery = Surat::where('status', 'proses')
+            ->with('user')
+            ->orderByRaw("CASE WHEN deadline_sla < NOW() THEN 0 ELSE 1 END")
+            ->orderBy('created_at')
+            ->limit(10);
+
+        // Filter berdasarkan role
+        if ($admin->role === 'admin_aspirasi') {
+            $antrianQuery->where(function($q) {
+                $q->where('tahap_sekarang', 2)
+                  ->orWhere('tahap_sekarang', '>=', 5);
+            });
+        } elseif ($admin->role === 'admin_kasubbag_tu') {
+            $antrianQuery->where('tahap_sekarang', 3);
+        } elseif ($admin->role === 'admin_kepala_balai') {
+            $antrianQuery->where('tahap_sekarang', 4);
+        }
+        // admin lama (role='admin') tetap bisa lihat semua
+
+        $antrian = $antrianQuery->get();
 
         // Rekap per jenis surat bulan ini
         $rekapJenis = Surat::whereMonth('created_at', $bulanIni)

@@ -30,9 +30,15 @@ class AuthenticatedSessionController extends Controller
     /** @var User $user */
     $user = Auth::user();
 
-    return $user->isAdmin()
-        ? redirect()->intended(route('admin.dashboard'))
-        : redirect()->intended(route('dashboard'));
+    // Jika admin, cek apakah sudah pilih role
+    if ($user->isAdmin()) {
+        if (!$user->hasSelectedRole()) {
+            return redirect()->intended(route('admin.role.select'));
+        }
+        return redirect()->intended(route('admin.dashboard'));
+    }
+
+    return redirect()->intended(route('dashboard'));
 }
         
 
