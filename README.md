@@ -1,8 +1,6 @@
 # Surat-Metrologi
 
-Sistem Manajemen Surat Digital untuk Kantor Metrologi dengan alur approval multi-tahap, tracking SLA real-time, dan dashboard komprehensif.
-
-
+Sistem Manajemen Surat Digital untuk BP SUML dengan alur approval multi-tahap, tracking SLA real-time, dan dashboard komprehensif.
 
 ### 🔐 Autentikasi & Keamanan
 - Login & Register dengan email verification
