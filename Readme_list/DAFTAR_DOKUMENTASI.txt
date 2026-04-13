@@ -12,7 +12,6 @@ VERSI: 1.0
 ================================================================================
 
 📌 UNTUK MEMULAI (Start Here):
-
 1. QUICK_START_RIWAYAT.md
    📖 Penjelasan singkat dalam 2-3 menit
    👥 Untuk: Semua orang
