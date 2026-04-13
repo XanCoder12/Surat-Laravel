@@ -42,7 +42,7 @@ Route::prefix('Admin')->middleware(['auth', 'verified', 'admin'])->name('admin.'
     Route::get('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'show'])->name('role.select');
     Route::post('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'store'])->name('role.store');
 
-    // Download routes (tanpa admin.role.check agar binary tidak corrupt)
+    // Download routes (tanpa admin.role.check agar binary gak corrupt)
     Route::get('/Surat/{surat}/preview/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'preview'])->name('surat.preview');
     Route::get('/Surat/{surat}/preview-content/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'previewContent'])->name('surat.previewContent');
     Route::get('/Surat/{surat}/download/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'download'])->name('surat.download');
