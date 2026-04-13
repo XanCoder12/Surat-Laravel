@@ -15,6 +15,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+
 // ===== USER =====
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [UserDashboard::class, 'index'])->name('dashboard');
