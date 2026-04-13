@@ -42,14 +42,17 @@ Route::prefix('Admin')->middleware(['auth', 'verified', 'admin'])->name('admin.'
     Route::get('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'show'])->name('role.select');
     Route::post('/Role-Selection', [\App\Http\Controllers\Admin\AdminRoleSelectionController::class, 'store'])->name('role.store');
 
+    // Download routes (tanpa admin.role.check agar binary tidak corrupt)
+    Route::get('/Surat/{surat}/preview/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'preview'])->name('surat.preview');
+    Route::get('/Surat/{surat}/preview-content/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'previewContent'])->name('surat.previewContent');
+    Route::get('/Surat/{surat}/download/{tipe}', [\App\Http\Controllers\Admin\SuratController::class, 'download'])->name('surat.download');
+
     // Dashboard & other routes (dengan middleware admin.role.check)
     Route::middleware(['admin.role.check'])->group(function () {
         Route::get('/Dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::get('/Surat', [SuratController::class, 'index'])->name('surat.index');
         Route::get('/Surat/{surat}', [SuratController::class, 'show'])->name('surat.show');
-        Route::get('/Surat/{surat}/preview/{tipe}', [SuratController::class, 'preview'])->name('surat.preview');
-        Route::get('/Surat/{surat}/download/{tipe}', [SuratController::class, 'download'])->name('surat.download');
         Route::post('/Surat/{surat}/setujui', [SuratController::class, 'setujui'])->name('surat.setujui');
         Route::post('/Surat/{surat}/tolak', [SuratController::class, 'tolak'])->name('surat.tolak');
         Route::post('/Surat/delete-request/{deleteRequest}/approve', [SuratController::class, 'approveDelete'])->name('surat.approveDelete');
