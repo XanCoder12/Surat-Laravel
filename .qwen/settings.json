@@ -5,7 +5,8 @@
       "Bash(findstr *)",
       "Bash(dir *)",
       "Bash(mkdir *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(composer *)"
     ]
   },
   "$version": 3
