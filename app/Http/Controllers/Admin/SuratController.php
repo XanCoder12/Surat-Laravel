@@ -270,12 +270,10 @@ class SuratController extends Controller
 
         $mimeType = $mimeTypes[$extension] ?? 'application/octet-stream';
 
-        // Hapus semua output buffer
         while (ob_get_level()) {
             ob_end_clean();
         }
 
-        // Gunakan Storage::download() yang sudah handle binary file dengan benar
         return \Storage::disk('public')->download($filePath, $downloadName, [
             'Content-Type' => $mimeType,
         ]);
@@ -295,7 +293,6 @@ class SuratController extends Controller
         $fullPath = storage_path('app/public/' . $filePath);
         $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
 
-        // Word: convert ke HTML
         if (in_array($extension, ['docx', 'doc'])) {
             $converter = new \App\Services\DocxToHtmlConverter($fullPath);
             $htmlContent = $converter->convert();
@@ -363,9 +360,6 @@ class SuratController extends Controller
         return back()->with('success', 'Permintaan hapus disetujui. Surat berhasil dihapus.');
     }
 
-    /**
-     * Reject permintaan hapus surat
-     */
     public function rejectDelete(Request $request, SuratDeleteRequest $deleteRequest)
     {
         // Pastikan request masih pending
